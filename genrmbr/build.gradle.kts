@@ -7,8 +7,5 @@ dependencies {
     implementation(libs.ksp.symbol.processing)
 }
 
-publishing {
-    repositories {
-        mavenLocal()
-    }
-}
+group = "com.github.ATchibo"
+version = "0.0.3"
