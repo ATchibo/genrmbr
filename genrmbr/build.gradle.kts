@@ -6,3 +6,9 @@ plugins {
 dependencies {
     implementation(libs.ksp.symbol.processing)
 }
+
+publishing {
+    repositories {
+        mavenLocal()
+    }
+}
