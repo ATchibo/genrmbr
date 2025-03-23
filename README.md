@@ -111,7 +111,7 @@ fun rememberExampleState(
     getAgencies: GetAgencies,  // this needs to be injected (e.g. with koinInject())
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
 ): ExampleState {
-    return remember { ExampleState(initialIndex, user, duck, getAgencies, coroutineScope) }
+    return remember(initialIndex) { ExampleState(initialIndex, user, duck, getAgencies, coroutineScope) }
 }
 ```
 
@@ -148,6 +148,7 @@ fun rememberExampleState(
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
 ): ExampleState {
     return rememberSaveable(
+      user, duck,
       saver = getExampleStateSaver(user, duck, getAgencies, coroutineScope)
     ) {
       ExampleState(initialIndex, user, duck, getAgencies, coroutineScope)

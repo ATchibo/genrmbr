@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.tchibolabs.genrmbr.defaultval.DefaultCustom
 import com.tchibolabs.genrmbr.defaultval.DefaultInject
 import com.tchibolabs.genrmbr.defaultval.DefaultInt
+import com.tchibolabs.genrmbr.invalidate.InvalidateRemember
 import com.tchibolabs.genrmbr.remembered.Remembered
 import com.tchibolabs.genrmbr.rememberedsaveable.RememberSaveable
 import com.tchibolabs.genrmbr.rememberedsaveable.SaveableField
@@ -25,9 +26,11 @@ import com.tchibolabs.genrmbr.rememberedsaveable.SaveableField
 class RememberSaveableExampleState(
     @DefaultInt(10)
     @SaveableField("index")
+    @InvalidateRemember
     initialIndex: Int,
     @DefaultCustom("injectClass<User>")
     private val user: User,
+    @InvalidateRemember
     @DefaultCustom("injectClass<Duck>")
     private val duck: Duck,
 ) {

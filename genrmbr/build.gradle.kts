@@ -8,7 +8,7 @@ dependencies {
 }
 
 group = "com.github.ATchibo"
-version = "0.0.3"
+version = "1.0"
 
 publishing {
     publications {
