@@ -52,8 +52,8 @@ class RememberSaveableProcessor(
         val saveableParameters = getSaveableParameters(classDeclaration)
 
         // Get parameters needed for the function and saver
-        val functionParams: List<String> =
-            getFunctionParams(classDeclaration, hasInjectorFn, injectorFn)
+        val functionParams: List<String> = getFunctionParams(classDeclaration, hasInjectorFn, injectorFn)
+        val invalidateParams: List<String> = getInvalidateRememberParams(classDeclaration)
         val constructorArgs: List<String> = getConstructorArgs(classDeclaration)
         val classesImports: List<String> = getClassesImports(classDeclaration)
 
@@ -67,10 +67,17 @@ class RememberSaveableProcessor(
             ?.mapNotNull { param -> param.name?.asString() }
             ?: emptyList()
 
+        val hasRememberCoroutineScope = classDeclaration.primaryConstructor?.parameters?.any {
+            it.annotations.any { it.shortName.asString() == "DefaultCoroutineScope"  }
+        } == true
+
         val additionalImports = buildList {
             add("import androidx.compose.runtime.saveable.Saver")
             add("import androidx.compose.runtime.saveable.mapSaver")
-            add("import androidx.compose.runtime.rememberCoroutineScope")
+
+            if (hasRememberCoroutineScope) {
+                add("import androidx.compose.runtime.rememberCoroutineScope")
+            }
         }
 
         file.writer().use { writer ->
@@ -86,6 +93,7 @@ class RememberSaveableProcessor(
                 @Composable
                 fun remember$className(${functionParams.joinToString()}): $className {
                     return rememberSaveable(
+                        ${if (invalidateParams.isNotEmpty()) "${invalidateParams.joinToString(",")}," else ""}
                         saver = get${className}Saver(
                             ${saverParams.joinToString { "$it = $it" }}
                         )
@@ -208,16 +216,24 @@ class RememberSaveableProcessor(
             ?.toList() ?: emptyList()
     }
 
+    private fun getInvalidateRememberParams(
+        classDeclaration: KSClassDeclaration,
+    ): List<String> = classDeclaration.primaryConstructor?.parameters?.filter { param ->
+        param.annotations.any { it.shortName.asString() == "InvalidateRemember" }
+    }?.mapNotNull { param ->
+        param.name?.asString() ?: return@mapNotNull null
+    } ?: emptyList()
+
     private fun getFunctionParams(
         classDeclaration: KSClassDeclaration,
         hasInjectorFn: Boolean,
         injectorFn: String
     ): List<String> {
         return classDeclaration.primaryConstructor?.parameters
-            ?.map { param ->
-                val name = param.name?.asString() ?: return@map null
+            ?.mapNotNull { param ->
+                val name = param.name?.asString() ?: return@mapNotNull null
                 val type =
-                    param.type.resolve().declaration.qualifiedName?.asString() ?: return@map null
+                    param.type.resolve().declaration.qualifiedName?.asString() ?: return@mapNotNull null
 
                 val defaultValue = when {
                     param.annotations.any { it.shortName.asString() == "DefaultInt" } -> {
@@ -241,6 +257,10 @@ class RememberSaveableProcessor(
                         "$name: $type = $value"
                     }
 
+                    param.annotations.any { it.shortName.asString() == "DefaultCoroutineScope" } -> {
+                        "$name: $type = rememberCoroutineScope()"
+                    }
+
                     hasInjectorFn && param.annotations.any { it.shortName.asString() == "DefaultInject" } -> {
                         val type = param.type.resolve().declaration.qualifiedName?.asString()
                             ?: "error(\"No provider function specified\")"
@@ -260,7 +280,7 @@ class RememberSaveableProcessor(
                 }
 
                 defaultValue
-            }?.filterNotNull() ?: emptyList()
+            } ?: emptyList()
     }
 
     private fun getConstructorArgs(classDeclaration: KSClassDeclaration): List<String> {

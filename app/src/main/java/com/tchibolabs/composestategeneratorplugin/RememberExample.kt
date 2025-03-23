@@ -14,19 +14,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.tchibolabs.genrmbr.defaultval.DefaultCoroutineScope
 import com.tchibolabs.genrmbr.defaultval.DefaultCustom
 import com.tchibolabs.genrmbr.defaultval.DefaultInject
 import com.tchibolabs.genrmbr.defaultval.DefaultInt
+import com.tchibolabs.genrmbr.invalidate.InvalidateRemember
 import com.tchibolabs.genrmbr.remembered.Remembered
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 @Remembered(injector = "injectClass")
 class RememberExampleState(
     @DefaultInt(10)
+    @InvalidateRemember
     initialIndex: Int,
     @DefaultCustom("injectClass<User>")
+    @InvalidateRemember
     private val user: User,
     @DefaultInject
     private val duck: Duck,
+    @DefaultCoroutineScope
+    private val coroutineScope: CoroutineScope,
 ) {
     var index by mutableIntStateOf(initialIndex)
         private set
@@ -36,6 +44,10 @@ class RememberExampleState(
 
     var myDuck by mutableStateOf(duck)
         private set
+
+    init {
+        coroutineScope.launch {  }
+    }
 }
 
 inline fun <reified T> injectClass(): T = when {

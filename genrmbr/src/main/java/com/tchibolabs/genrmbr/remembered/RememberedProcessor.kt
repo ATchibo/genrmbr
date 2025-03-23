@@ -44,8 +44,8 @@ class RememberedProcessor(
 
         val hasInjectorFn = injectorFn.isNotEmpty()
 
-        val functionParams: List<String> =
-            getFunctionParams(classDeclaration, hasInjectorFn, injectorFn)
+        val functionParams: List<String> = getFunctionParams(classDeclaration, hasInjectorFn, injectorFn)
+        val invalidateParams: List<String> = getInvalidateRememberParams(classDeclaration)
         val constructorArgs: List<String> = getConstructorArgs(classDeclaration)
         val classesImports: List<String> = getClassesImports(classDeclaration)
 
@@ -71,21 +71,29 @@ class RememberedProcessor(
                 
                 @Composable
                 fun remember$className(${functionParams.joinToString()}): $className {
-                    return remember { $className(${constructorArgs.joinToString()}) }
+                    return remember${if (invalidateParams.isNotEmpty()) "(${invalidateParams.joinToString(",")})" else ""} { $className(${constructorArgs.joinToString()}) }
                 }
                 """.trimIndent()
             )
         }
     }
 
+    private fun getInvalidateRememberParams(
+        classDeclaration: KSClassDeclaration,
+    ): List<String> = classDeclaration.primaryConstructor?.parameters?.filter { param ->
+        param.annotations.any { it.shortName.asString() == "InvalidateRemember" }
+    }?.mapNotNull { param ->
+        param.name?.asString() ?: return@mapNotNull null
+    } ?: emptyList()
+
     private fun getFunctionParams(
         classDeclaration: KSClassDeclaration,
         hasInjectorFn: Boolean,
         injectorFn: String
     ): List<String> {
-        return classDeclaration.primaryConstructor?.parameters?.map { param ->
-            val name = param.name?.asString() ?: return@map null
-            val type = param.type.resolve().declaration.qualifiedName?.asString() ?: return@map null
+        return classDeclaration.primaryConstructor?.parameters?.mapNotNull { param ->
+            val name = param.name?.asString() ?: return@mapNotNull null
+            val type = param.type.resolve().declaration.qualifiedName?.asString() ?: return@mapNotNull null
 
             val defaultValue = when {
                 param.annotations.any { it.shortName.asString() == "DefaultInt" } -> {
@@ -131,7 +139,7 @@ class RememberedProcessor(
             }
 
             defaultValue
-        }?.filterNotNull() ?: emptyList()
+        } ?: emptyList()
     }
 
     private fun getConstructorArgs(classDeclaration: KSClassDeclaration): List<String> {
