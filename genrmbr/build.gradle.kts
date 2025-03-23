@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.jetbrains.kotlin.jvm)
+    kotlin("jvm") version "1.8.0"
     alias(libs.plugins.ksp)
     id("maven-publish")
 }
@@ -9,3 +9,15 @@ dependencies {
 
 group = "com.github.ATchibo"
 version = "0.0.3"
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = project.group.toString()
+            artifactId = project.name
+            version = project.version.toString()
+
+            from(components["java"])
+        }
+    }
+}
