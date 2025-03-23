@@ -49,6 +49,16 @@ class RememberedProcessor(
         val constructorArgs: List<String> = getConstructorArgs(classDeclaration)
         val classesImports: List<String> = getClassesImports(classDeclaration)
 
+        val hasRememberCoroutineScope = classDeclaration.primaryConstructor?.parameters?.any {
+            it.annotations.any { it.shortName.asString() == "DefaultCoroutineScope"  }
+        } == true
+
+        val additionalImports: List<String> = buildList {
+            if (hasRememberCoroutineScope) {
+                add("import androidx.compose.runtime.rememberCoroutineScope")
+            }
+        }
+
         file.writer().use { writer ->
             writer.write(
                 """
@@ -57,6 +67,7 @@ class RememberedProcessor(
                 import androidx.compose.runtime.Composable
                 import androidx.compose.runtime.remember
                 ${classesImports.joinToString("\n")}
+                ${additionalImports.joinToString("\n")}
                 
                 @Composable
                 fun remember$className(${functionParams.joinToString()}): $className {
@@ -96,6 +107,10 @@ class RememberedProcessor(
                         param.annotations.first { it.shortName.asString() == "DefaultBoolean" }
                     val value = annotation.arguments.firstOrNull()?.value as? Boolean == true
                     "$name: $type = $value"
+                }
+
+                param.annotations.any { it.shortName.asString() == "DefaultCoroutineScope" } -> {
+                    "$name: $type = rememberCoroutineScope()"
                 }
 
                 hasInjectorFn && param.annotations.any { it.shortName.asString() == "DefaultInject" } -> {
