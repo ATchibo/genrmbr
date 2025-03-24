@@ -1,4 +1,4 @@
-package com.tchibolabs.genrmbr.remembered
+package com.tchibolabs.genrmbr.processors.remembered
 
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
@@ -7,10 +7,19 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.validate
+import com.tchibolabs.genrmbr.annotations.Remembered
+import com.tchibolabs.genrmbr.processors.ANNOTATION_INJECT
+import com.tchibolabs.genrmbr.processors.ANNOTATION_INJECT_CUSTOM
+import com.tchibolabs.genrmbr.processors.ANNOTATION_REMEMBERED
+import com.tchibolabs.genrmbr.processors.getFunctionParams
+import com.tchibolabs.genrmbr.processors.getInjectorParameter
 
 class RememberedProcessor(
-    private val codeGenerator: CodeGenerator
+    private val codeGenerator: CodeGenerator,
+    private val options: Map<String, String>
 ) : SymbolProcessor {
+
+    private val useKoinInjection: Boolean = options["genrmbr.useKoinInjection"]?.toBoolean() == true
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val symbols = resolver.getSymbolsWithAnnotation(Remembered::class.qualifiedName!!)
@@ -34,28 +43,24 @@ class RememberedProcessor(
             fileName = "Remember$className"
         )
 
-        // Get the injector function name from the Remembered annotation if present
-        val injectorFn = classDeclaration.annotations
-            .find { it.shortName.asString() == "Remembered" }
-            ?.arguments
-            ?.find { it.name?.asString() == "injector" }
-            ?.value as? String
-            ?: ""
-
+        val injectorFn = getInjectorParameter(ANNOTATION_REMEMBERED, classDeclaration)
         val hasInjectorFn = injectorFn.isNotEmpty()
 
-        val functionParams: List<String> = getFunctionParams(classDeclaration, hasInjectorFn, injectorFn)
+        val functionParams: List<String> = getFunctionParams(classDeclaration, hasInjectorFn, injectorFn, useKoinInjection)
         val invalidateParams: List<String> = getInvalidateRememberParams(classDeclaration)
         val constructorArgs: List<String> = getConstructorArgs(classDeclaration)
         val classesImports: List<String> = getClassesImports(classDeclaration)
 
         val hasRememberCoroutineScope = classDeclaration.primaryConstructor?.parameters?.any {
-            it.annotations.any { it.shortName.asString() == "DefaultCoroutineScope"  }
+            it.type.resolve().declaration.qualifiedName?.asString() == "kotlinx.coroutines.CoroutineScope"
         } == true
 
         val additionalImports: List<String> = buildList {
             if (hasRememberCoroutineScope) {
                 add("import androidx.compose.runtime.rememberCoroutineScope")
+            }
+            if (useKoinInjection) {
+                add("import org.koin.compose.koinInject")
             }
         }
 
@@ -85,62 +90,6 @@ class RememberedProcessor(
     }?.mapNotNull { param ->
         param.name?.asString() ?: return@mapNotNull null
     } ?: emptyList()
-
-    private fun getFunctionParams(
-        classDeclaration: KSClassDeclaration,
-        hasInjectorFn: Boolean,
-        injectorFn: String
-    ): List<String> {
-        return classDeclaration.primaryConstructor?.parameters?.mapNotNull { param ->
-            val name = param.name?.asString() ?: return@mapNotNull null
-            val type = param.type.resolve().declaration.qualifiedName?.asString() ?: return@mapNotNull null
-
-            val defaultValue = when {
-                param.annotations.any { it.shortName.asString() == "DefaultInt" } -> {
-                    val annotation =
-                        param.annotations.first { it.shortName.asString() == "DefaultInt" }
-                    val value = annotation.arguments.firstOrNull()?.value as? Int ?: 0
-                    "$name: $type = $value"
-                }
-
-                param.annotations.any { it.shortName.asString() == "DefaultString" } -> {
-                    val annotation =
-                        param.annotations.first { it.shortName.asString() == "DefaultString" }
-                    val value = annotation.arguments.firstOrNull()?.value as? String ?: ""
-                    "$name: $type = \"$value\""
-                }
-
-                param.annotations.any { it.shortName.asString() == "DefaultBoolean" } -> {
-                    val annotation =
-                        param.annotations.first { it.shortName.asString() == "DefaultBoolean" }
-                    val value = annotation.arguments.firstOrNull()?.value as? Boolean == true
-                    "$name: $type = $value"
-                }
-
-                param.annotations.any { it.shortName.asString() == "DefaultCoroutineScope" } -> {
-                    "$name: $type = rememberCoroutineScope()"
-                }
-
-                hasInjectorFn && param.annotations.any { it.shortName.asString() == "DefaultInject" } -> {
-                    val type = param.type.resolve().declaration.qualifiedName?.asString()
-                        ?: "error(\"No provider function specified\")"
-                    "$name: $type = $injectorFn<$type>()"
-                }
-
-                param.annotations.any { it.shortName.asString() == "DefaultCustom" } -> {
-                    val annotation =
-                        param.annotations.first { it.shortName.asString() == "DefaultCustom" }
-                    val providerFunction = annotation.arguments.firstOrNull()?.value as? String
-                        ?: "error(\"No provider function specified\")"
-                    "$name: $type = $providerFunction()"
-                }
-
-                else -> "$name: $type"
-            }
-
-            defaultValue
-        } ?: emptyList()
-    }
 
     private fun getConstructorArgs(classDeclaration: KSClassDeclaration): List<String> {
         return classDeclaration.primaryConstructor?.parameters?.mapNotNull { param ->

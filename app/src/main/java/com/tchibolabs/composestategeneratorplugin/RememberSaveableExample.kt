@@ -2,9 +2,7 @@ package com.tchibolabs.composestategeneratorplugin
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -14,27 +12,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tchibolabs.genrmbr.defaultval.DefaultCustom
-import com.tchibolabs.genrmbr.defaultval.DefaultInject
-import com.tchibolabs.genrmbr.defaultval.DefaultInt
-import com.tchibolabs.genrmbr.invalidate.InvalidateRemember
-import com.tchibolabs.genrmbr.remembered.Remembered
-import com.tchibolabs.genrmbr.rememberedsaveable.RememberSaveable
-import com.tchibolabs.genrmbr.rememberedsaveable.SaveableField
+import com.tchibolabs.genrmbr.annotations.Inject
+import com.tchibolabs.genrmbr.annotations.InjectCustom
+import com.tchibolabs.genrmbr.annotations.Key
+import com.tchibolabs.genrmbr.annotations.RememberSaveable
+import com.tchibolabs.genrmbr.annotations.Saveable
+import com.tchibolabs.genrmbr.annotations.Value
 
 @RememberSaveable
 class RememberSaveableExampleState(
-    @DefaultInt(10)
-    @SaveableField("index")
-    @InvalidateRemember
+    @Value("10")
+    @Saveable("index")
+    @Key
     initialIndex: Int,
-    @DefaultCustom("injectClass<User>")
+    @Inject
     private val user: User,
-    @InvalidateRemember
-    @DefaultCustom("injectClass<Duck>")
+    @Key
+    @InjectCustom("injectClass<Duck>")
     private val duck: Duck,
+    @Value("Duck()")
+    val duck1: Duck,
 ) {
-    @SaveableField("index")
+    @Saveable("index")
     var index by mutableIntStateOf(initialIndex)
         private set
 
@@ -58,5 +57,6 @@ fun RememberSaveableExample(
         Text("Saveable Index: ${state.index}")
         Text("Saveable User: ${state.myUser}")
         Text("Saveable Duck: ${state.myDuck}")
+        Text("Saveable Duck1: ${state.duck1}")
     }
 }

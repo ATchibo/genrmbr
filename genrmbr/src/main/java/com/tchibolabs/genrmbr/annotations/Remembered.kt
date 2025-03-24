@@ -1,4 +1,4 @@
-package com.tchibolabs.genrmbr.remembered
+package com.tchibolabs.genrmbr.annotations
 
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)
