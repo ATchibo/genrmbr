@@ -1,5 +1,5 @@
-package com.tchibolabs.genrmbr.rememberedsaveable
+package com.tchibolabs.genrmbr.annotations
 
 @Target(AnnotationTarget.PROPERTY, AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.SOURCE)
-annotation class SaveableField(val key: String)
+annotation class Saveable(val key: String)

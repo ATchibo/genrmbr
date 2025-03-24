@@ -2,9 +2,7 @@ package com.tchibolabs.composestategeneratorplugin
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -14,26 +12,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tchibolabs.genrmbr.defaultval.DefaultCoroutineScope
-import com.tchibolabs.genrmbr.defaultval.DefaultCustom
-import com.tchibolabs.genrmbr.defaultval.DefaultInject
-import com.tchibolabs.genrmbr.defaultval.DefaultInt
-import com.tchibolabs.genrmbr.invalidate.InvalidateRemember
-import com.tchibolabs.genrmbr.remembered.Remembered
+import com.tchibolabs.genrmbr.annotations.Inject
+import com.tchibolabs.genrmbr.annotations.InjectCustom
+import com.tchibolabs.genrmbr.annotations.Key
+import com.tchibolabs.genrmbr.annotations.Remembered
+import com.tchibolabs.genrmbr.annotations.Value
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @Remembered(injector = "injectClass")
 class RememberExampleState(
-    @DefaultInt(10)
-    @InvalidateRemember
+    @Value("10")
+    @Key
     initialIndex: Int,
-    @DefaultCustom("injectClass<User>")
-    @InvalidateRemember
+    @InjectCustom("injectClass<User>")
+    @Key
     private val user: User,
-    @DefaultInject
+    @Inject
     private val duck: Duck,
-    @DefaultCoroutineScope
     private val coroutineScope: CoroutineScope,
 ) {
     var index by mutableIntStateOf(initialIndex)

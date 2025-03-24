@@ -1,11 +1,11 @@
-package com.tchibolabs.genrmbr.remembered
+package com.tchibolabs.genrmbr.processors.rememberedsaveable
 
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.processing.SymbolProcessorProvider
 
-class RememberedProcessorProvider : SymbolProcessorProvider {
+class RememberSaveableProcessorProvider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
-        return RememberedProcessor(environment.codeGenerator)
+        return RememberSaveableProcessor(environment.codeGenerator, environment.options)
     }
 }
