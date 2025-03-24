@@ -33,6 +33,20 @@ dependencies {
 }
 ```
 
+### Step 4 (optional): Add support for Koin
+Add this to your module's build.gradle:
+```
+android {
+    ...
+    defaultConfig {
+        ...
+        ksp {
+            arg("genrmbr.injectionType", "koin")
+        }
+    }
+}
+```
+
 ## Example Usages
 We have our composable with a state:
 ```
