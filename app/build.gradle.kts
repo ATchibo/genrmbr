@@ -19,7 +19,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ksp {
-            arg("genrmbr.useKoinInjection", "true")
+            arg("genrmbr.injectionType", "koin")
         }
     }
 

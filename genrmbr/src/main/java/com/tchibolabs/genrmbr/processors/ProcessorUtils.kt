@@ -10,6 +10,9 @@ internal const val ANNOTATION_REMEMBERED = "Remembered"
 internal const val ANNOTATION_REMEMBER_SAVEABLE = "RememberSaveable"
 internal const val ANNOTATION_KEY = "Key"
 
+fun usesKoinInjection(options: Map<String, String>) =
+    options["genrmbr.injectionType"] == "koin"
+
 // Get the injector function name from the Remembered/RememberSaveable annotation if present
 fun getInjectorParameter(
     annotationName: String,

@@ -13,13 +13,14 @@ import com.tchibolabs.genrmbr.processors.ANNOTATION_INJECT_CUSTOM
 import com.tchibolabs.genrmbr.processors.ANNOTATION_REMEMBERED
 import com.tchibolabs.genrmbr.processors.getFunctionParams
 import com.tchibolabs.genrmbr.processors.getInjectorParameter
+import com.tchibolabs.genrmbr.processors.usesKoinInjection
 
 class RememberedProcessor(
     private val codeGenerator: CodeGenerator,
     private val options: Map<String, String>
 ) : SymbolProcessor {
 
-    private val useKoinInjection: Boolean = options["genrmbr.useKoinInjection"]?.toBoolean() == true
+    private val useKoinInjection: Boolean = usesKoinInjection(options)
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val symbols = resolver.getSymbolsWithAnnotation(Remembered::class.qualifiedName!!)

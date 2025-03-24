@@ -14,6 +14,7 @@ import com.tchibolabs.genrmbr.processors.ANNOTATION_REMEMBER_SAVEABLE
 import com.tchibolabs.genrmbr.processors.ANNOTATION_SAVEABLE
 import com.tchibolabs.genrmbr.processors.getFunctionParams
 import com.tchibolabs.genrmbr.processors.getInjectorParameter
+import com.tchibolabs.genrmbr.processors.usesKoinInjection
 import kotlin.text.toBoolean
 
 class RememberSaveableProcessor(
@@ -21,7 +22,7 @@ class RememberSaveableProcessor(
     private val options: Map<String, String>
 ) : SymbolProcessor {
 
-    private val useKoinInjection: Boolean = options["genrmbr.useKoinInjection"]?.toBoolean() == true
+    private val useKoinInjection: Boolean = usesKoinInjection(options)
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val symbols = resolver.getSymbolsWithAnnotation(RememberSaveable::class.qualifiedName!!)
