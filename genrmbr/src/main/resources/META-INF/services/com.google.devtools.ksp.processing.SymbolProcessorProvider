@@ -1,2 +1,2 @@
-com.tchibolabs.genrmbr.processors.remembered.RememberedProcessorProvider
-com.tchibolabs.genrmbr.processors.rememberedsaveable.RememberSaveableProcessorProvider
+com.tchibolabs.genrmbr.processors.remember.RememberProcessorProvider
+com.tchibolabs.genrmbr.processors.remembersaveable.RememberSaveableProcessorProvider

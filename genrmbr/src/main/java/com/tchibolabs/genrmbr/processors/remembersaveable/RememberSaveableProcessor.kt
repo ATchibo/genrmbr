@@ -1,21 +1,24 @@
-package com.tchibolabs.genrmbr.processors.rememberedsaveable
+package com.tchibolabs.genrmbr.processors.remembersaveable
 
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
+import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.validate
 import com.tchibolabs.genrmbr.annotations.RememberSaveable
 import com.tchibolabs.genrmbr.processors.ANNOTATION_KEY
-import com.tchibolabs.genrmbr.processors.ANNOTATION_REMEMBERED
 import com.tchibolabs.genrmbr.processors.ANNOTATION_REMEMBER_SAVEABLE
 import com.tchibolabs.genrmbr.processors.ANNOTATION_SAVEABLE
+import com.tchibolabs.genrmbr.processors.getClassesImports
+import com.tchibolabs.genrmbr.processors.getConstructorArgs
 import com.tchibolabs.genrmbr.processors.getFunctionParams
 import com.tchibolabs.genrmbr.processors.getInjectorParameter
+import com.tchibolabs.genrmbr.processors.getParameterTypeString
+import com.tchibolabs.genrmbr.processors.hasRememberCoroutineScope
 import com.tchibolabs.genrmbr.processors.usesKoinInjection
-import kotlin.text.toBoolean
 
 class RememberSaveableProcessor(
     private val codeGenerator: CodeGenerator,
@@ -30,7 +33,7 @@ class RememberSaveableProcessor(
             .filter { it.validate() }
 
         symbols.forEach { classDeclaration ->
-            generateRememberSaveableFun(classDeclaration, resolver)
+            generateRememberSaveableFun(classDeclaration)
         }
 
         return emptyList()
@@ -38,7 +41,6 @@ class RememberSaveableProcessor(
 
     private fun generateRememberSaveableFun(
         classDeclaration: KSClassDeclaration,
-        resolver: Resolver
     ) {
         val className = classDeclaration.simpleName.asString()
         val packageName = classDeclaration.packageName.asString()
@@ -56,25 +58,34 @@ class RememberSaveableProcessor(
         val saveableFields = getSaveableFields(classDeclaration)
         val saveableParameters = getSaveableParameters(classDeclaration)
 
+        try {
+            assert(saveableFields.size == saveableParameters.size)
+            val fieldsKeys = saveableFields.map { it.key }.sorted()
+            val paramsKeys = saveableFields.map { it.key }.sorted()
+            fieldsKeys.zip(paramsKeys).forEach {
+                assert(it.component1() == it.component2())
+            }
+        } catch (_: AssertionError) {
+            throw Exception("Not all @Saveable class parameters have a matching property!")
+        }
+
         // Get parameters needed for the function and saver
         val functionParams: List<String> = getFunctionParams(classDeclaration, hasInjectorFn, injectorFn, useKoinInjection)
         val invalidateParams: List<String> = getInvalidateRememberParams(classDeclaration)
         val constructorArgs: List<String> = getConstructorArgs(classDeclaration)
         val classesImports: List<String> = getClassesImports(classDeclaration)
 
-        // Collect parameters needed for the saver (excluding ones with SaveableField annotation)
+        // Collect parameters needed for the saver (excluding ones with Saveable annotation)
         val saverParams = classDeclaration.primaryConstructor?.parameters
             ?.filter { param ->
                 param.name?.asString() ?: return@filter false
-                // Skip parameters that are marked with @SaveableField
+                // Skip parameters that are marked with @Saveable
                 !param.annotations.any { ann -> ann.shortName.asString() == ANNOTATION_SAVEABLE }
             }
             ?.mapNotNull { param -> param.name?.asString() }
             ?: emptyList()
 
-        val hasRememberCoroutineScope = classDeclaration.primaryConstructor?.parameters?.any {
-            it.type.resolve().declaration.qualifiedName?.asString() == "kotlinx.coroutines.CoroutineScope"
-        } == true
+        val hasRememberCoroutineScope = hasRememberCoroutineScope(classDeclaration)
 
         val additionalImports = buildList {
             add("import androidx.compose.runtime.saveable.Saver")
@@ -85,6 +96,7 @@ class RememberSaveableProcessor(
             }
             if (useKoinInjection) {
                 add("import org.koin.compose.koinInject")
+                add("import org.koin.core.parameter.parametersOf")
             }
         }
 
@@ -137,9 +149,8 @@ class RememberSaveableProcessor(
             ?.filter { param -> saverParams.contains(param.name?.asString()) }
             ?.mapNotNull { param ->
                 val name = param.name?.asString() ?: return@mapNotNull null
-                val type = param.type.resolve().declaration.qualifiedName?.asString()
-                    ?: return@mapNotNull null
-                "$name: $type"
+                val typeString = getParameterTypeString(param)
+                "$name: $typeString"
             } ?: emptyList()
 
         // Generate save map entries using specified keys
@@ -153,8 +164,8 @@ class RememberSaveableProcessor(
 
             val saveableItem = saveableParameters.find { it.name == name }
             if (saveableItem != null) {
-                val type = param.type.resolve().declaration.qualifiedName?.asString() ?: "Any"
-                "$name = it[\"${saveableItem.key}\"] as $type"
+                val typeString = getParameterTypeString(param)
+                "$name = it[\"${saveableItem.key}\"] as $typeString"
             } else {
                 "$name = $name"
             }
@@ -195,11 +206,7 @@ class RememberSaveableProcessor(
             }
             .map { prop ->
                 val name = prop.simpleName.asString()
-                val key = prop.annotations
-                    .find { it.shortName.asString() == ANNOTATION_SAVEABLE }
-                    ?.arguments
-                    ?.find { it.name?.asString() == "key" }
-                    ?.value as String
+                val key = getSaveableKey(prop.annotations)
 
                 SaveableItemInfo(name, key, isProperty = true)
             }
@@ -213,16 +220,19 @@ class RememberSaveableProcessor(
             }
             ?.map { param ->
                 val name = param.name?.asString() ?: ""
-                val key = param.annotations
-                    .find { it.shortName.asString() == ANNOTATION_SAVEABLE }
-                    ?.arguments
-                    ?.find { it.name?.asString() == "key" }
-                    ?.value as String
+                val key = getSaveableKey(param.annotations)
 
                 SaveableItemInfo(name, key, isProperty = false)
             }
             ?.toList() ?: emptyList()
     }
+
+    private fun getSaveableKey(annotations: Sequence<KSAnnotation>) =
+        annotations
+            .find { it.shortName.asString() == ANNOTATION_SAVEABLE }
+            ?.arguments
+            ?.find { it.name?.asString() == "key" }
+            ?.value as String
 
     private fun getInvalidateRememberParams(
         classDeclaration: KSClassDeclaration,
@@ -231,23 +241,6 @@ class RememberSaveableProcessor(
     }?.mapNotNull { param ->
         param.name?.asString() ?: return@mapNotNull null
     } ?: emptyList()
-
-    private fun getConstructorArgs(classDeclaration: KSClassDeclaration): List<String> {
-        return classDeclaration.primaryConstructor?.parameters?.mapNotNull { param ->
-            param.name?.asString()
-        } ?: emptyList()
-    }
-
-    private fun getClassesImports(classDeclaration: KSClassDeclaration): List<String> {
-        return classDeclaration.getAllProperties()
-            .mapNotNull { property ->
-                val type = property.type.resolve()
-                val typeName = type.declaration.qualifiedName?.asString()
-                if (typeName != null && !typeName.startsWith("kotlin.")) typeName else null
-            }
-            .toSet() // Ensure unique imports
-            .map { "import $it" }
-    }
 }
 
 // Helper class to store information about saveable items (fields or parameters)

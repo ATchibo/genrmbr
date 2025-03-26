@@ -12,23 +12,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tchibolabs.genrmbr.annotations.Inject
-import com.tchibolabs.genrmbr.annotations.InjectCustom
+import com.tchibolabs.genrmbr.annotations.DefaultInject
 import com.tchibolabs.genrmbr.annotations.Key
-import com.tchibolabs.genrmbr.annotations.Remembered
+import com.tchibolabs.genrmbr.annotations.Provide
+import com.tchibolabs.genrmbr.annotations.Remember
 import com.tchibolabs.genrmbr.annotations.Value
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-@Remembered(injector = "injectClass")
+@Remember(injector = "injectClass")
 class RememberExampleState(
     @Value("10")
     @Key
     initialIndex: Int,
-    @InjectCustom("injectClass<User>")
+    @Provide("injectClass<User>")
     @Key
     private val user: User,
-    @Inject
+    @DefaultInject
     private val duck: Duck,
     private val coroutineScope: CoroutineScope,
 ) {

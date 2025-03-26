@@ -1,4 +1,4 @@
-package com.tchibolabs.genrmbr.processors.remembered
+package com.tchibolabs.genrmbr.processors.remember
 
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
@@ -7,15 +7,16 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.validate
-import com.tchibolabs.genrmbr.annotations.Remembered
-import com.tchibolabs.genrmbr.processors.ANNOTATION_INJECT
-import com.tchibolabs.genrmbr.processors.ANNOTATION_INJECT_CUSTOM
-import com.tchibolabs.genrmbr.processors.ANNOTATION_REMEMBERED
+import com.tchibolabs.genrmbr.annotations.Remember
+import com.tchibolabs.genrmbr.processors.ANNOTATION_REMEMBER
+import com.tchibolabs.genrmbr.processors.getClassesImports
+import com.tchibolabs.genrmbr.processors.getConstructorArgs
 import com.tchibolabs.genrmbr.processors.getFunctionParams
 import com.tchibolabs.genrmbr.processors.getInjectorParameter
+import com.tchibolabs.genrmbr.processors.hasRememberCoroutineScope
 import com.tchibolabs.genrmbr.processors.usesKoinInjection
 
-class RememberedProcessor(
+class RememberProcessor(
     private val codeGenerator: CodeGenerator,
     private val options: Map<String, String>
 ) : SymbolProcessor {
@@ -23,7 +24,7 @@ class RememberedProcessor(
     private val useKoinInjection: Boolean = usesKoinInjection(options)
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        val symbols = resolver.getSymbolsWithAnnotation(Remembered::class.qualifiedName!!)
+        val symbols = resolver.getSymbolsWithAnnotation(Remember::class.qualifiedName!!)
             .filterIsInstance<KSClassDeclaration>()
             .filter { it.validate() }
 
@@ -44,7 +45,7 @@ class RememberedProcessor(
             fileName = "Remember$className"
         )
 
-        val injectorFn = getInjectorParameter(ANNOTATION_REMEMBERED, classDeclaration)
+        val injectorFn = getInjectorParameter(ANNOTATION_REMEMBER, classDeclaration)
         val hasInjectorFn = injectorFn.isNotEmpty()
 
         val functionParams: List<String> = getFunctionParams(classDeclaration, hasInjectorFn, injectorFn, useKoinInjection)
@@ -52,9 +53,7 @@ class RememberedProcessor(
         val constructorArgs: List<String> = getConstructorArgs(classDeclaration)
         val classesImports: List<String> = getClassesImports(classDeclaration)
 
-        val hasRememberCoroutineScope = classDeclaration.primaryConstructor?.parameters?.any {
-            it.type.resolve().declaration.qualifiedName?.asString() == "kotlinx.coroutines.CoroutineScope"
-        } == true
+        val hasRememberCoroutineScope = hasRememberCoroutineScope(classDeclaration)
 
         val additionalImports: List<String> = buildList {
             if (hasRememberCoroutineScope) {
@@ -62,6 +61,7 @@ class RememberedProcessor(
             }
             if (useKoinInjection) {
                 add("import org.koin.compose.koinInject")
+                add("import org.koin.core.parameter.parametersOf")
             }
         }
 
@@ -91,21 +91,4 @@ class RememberedProcessor(
     }?.mapNotNull { param ->
         param.name?.asString() ?: return@mapNotNull null
     } ?: emptyList()
-
-    private fun getConstructorArgs(classDeclaration: KSClassDeclaration): List<String> {
-        return classDeclaration.primaryConstructor?.parameters?.mapNotNull { param ->
-            param.name?.asString()
-        } ?: emptyList()
-    }
-
-    private fun getClassesImports(classDeclaration: KSClassDeclaration): List<String> {
-        return classDeclaration.getAllProperties()
-            .mapNotNull { property ->
-                val type = property.type.resolve()
-                val typeName = type.declaration.qualifiedName?.asString()
-                if (typeName != null && !typeName.startsWith("kotlin.")) typeName else null
-            }
-            .toSet() // Ensure unique imports
-            .map { "import $it" }
-    }
 }
