@@ -1,9 +1,8 @@
-package com.tchibolabs.genrmbr.processors
+package com.tchibolabs.forgetmenot.processors
 
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSValueParameter
-import com.squareup.kotlinpoet.ANNOTATION
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.ParameterSpec
@@ -29,7 +28,7 @@ internal val mapSaverClassName = ClassName("androidx.compose.runtime.saveable", 
 private const val TAB = "  "
 
 internal fun usesKoinInjection(options: Map<String, String>) =
-    options["genrmbr.injectionType"] == "koin"
+    options["forgetmenot.injectionType"] == "koin"
 
 // Get the injector function name from the Remembered/RememberSaveable annotation if present
 internal fun getInjectorParameter(

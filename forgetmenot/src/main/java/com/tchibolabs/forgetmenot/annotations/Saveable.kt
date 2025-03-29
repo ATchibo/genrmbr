@@ -1,4 +1,4 @@
-package com.tchibolabs.genrmbr.annotations
+package com.tchibolabs.forgetmenot.annotations
 
 @Target(AnnotationTarget.PROPERTY, AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.SOURCE)

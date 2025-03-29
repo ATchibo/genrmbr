@@ -19,7 +19,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ksp {
-            arg("genrmbr.injectionType", "koin")
+            arg("forgetmenot.injectionType", "koin")
         }
     }
 
@@ -45,8 +45,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":genrmbr"))
-    ksp(project(":genrmbr"))
+    implementation(project(":forgetmenot"))
+    ksp(project(":forgetmenot"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

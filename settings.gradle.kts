@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "ComposeStateGeneratorPlugin"
 include(":app")
-include(":genrmbr")
+include(":forgetmenot")

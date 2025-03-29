@@ -1,6 +1,6 @@
-# genrmbr: a Compose states boilerplate code generator
+# forgetmenot: a Compose states boilerplate code generator
 
-genrmbr is a Kotlin library intended for generating remember and rememberSaveable composable functions. These functions are used for instantiating state classes of certain composable functions.
+forgetmenot is a Kotlin library intended for generating remember and rememberSaveable composable functions. These functions are used for instantiating state classes of certain composable functions.
 
 ## Installation:
 
@@ -28,8 +28,8 @@ plugins {
 Add this to your module's build.gradle file:
 ```
 dependencies {
-  implementation("com.github.ATchibo:genrmbr:<version>")
-  ksp("com.github.ATchibo:genrmbr:<version>")
+  implementation("com.github.ATchibo:forgetmenot:<version>")
+  ksp("com.github.ATchibo:forgetmenot:<version>")
 }
 ```
 
@@ -41,7 +41,7 @@ android {
     defaultConfig {
         ...
         ksp {
-            arg("genrmbr.injectionType", "koin")
+            arg("forgetmenot.injectionType", "koin")
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.tchibolabs.genrmbr.processors.remember
+package com.tchibolabs.forgetmenot.processors.remember
 
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
@@ -15,20 +15,20 @@ import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.writeTo
-import com.tchibolabs.genrmbr.annotations.Remember
-import com.tchibolabs.genrmbr.processors.ANNOTATION_REMEMBER
-import com.tchibolabs.genrmbr.processors.composableAnnotation
-import com.tchibolabs.genrmbr.processors.getConstructorArgs
-import com.tchibolabs.genrmbr.processors.getFunctionParamSpecs
-import com.tchibolabs.genrmbr.processors.getInjectorParameter
-import com.tchibolabs.genrmbr.processors.getInvalidateRememberParams
-import com.tchibolabs.genrmbr.processors.hasRememberCoroutineScope
-import com.tchibolabs.genrmbr.processors.koinInjectClassName
-import com.tchibolabs.genrmbr.processors.parametersOfClassName
-import com.tchibolabs.genrmbr.processors.prependTabs
-import com.tchibolabs.genrmbr.processors.rememberClassName
-import com.tchibolabs.genrmbr.processors.rememberCoroutineScopeClassName
-import com.tchibolabs.genrmbr.processors.usesKoinInjection
+import com.tchibolabs.forgetmenot.annotations.Remember
+import com.tchibolabs.forgetmenot.processors.ANNOTATION_REMEMBER
+import com.tchibolabs.forgetmenot.processors.composableAnnotation
+import com.tchibolabs.forgetmenot.processors.getConstructorArgs
+import com.tchibolabs.forgetmenot.processors.getFunctionParamSpecs
+import com.tchibolabs.forgetmenot.processors.getInjectorParameter
+import com.tchibolabs.forgetmenot.processors.getInvalidateRememberParams
+import com.tchibolabs.forgetmenot.processors.hasRememberCoroutineScope
+import com.tchibolabs.forgetmenot.processors.koinInjectClassName
+import com.tchibolabs.forgetmenot.processors.parametersOfClassName
+import com.tchibolabs.forgetmenot.processors.prependTabs
+import com.tchibolabs.forgetmenot.processors.rememberClassName
+import com.tchibolabs.forgetmenot.processors.rememberCoroutineScopeClassName
+import com.tchibolabs.forgetmenot.processors.usesKoinInjection
 import java.time.LocalDateTime
 
 class RememberProcessor(

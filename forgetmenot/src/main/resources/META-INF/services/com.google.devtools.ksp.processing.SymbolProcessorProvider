@@ -1,0 +1,2 @@
+com.tchibolabs.forgetmenot.processors.remember.RememberProcessorProvider
+com.tchibolabs.forgetmenot.processors.remembersaveable.RememberSaveableProcessorProvider
