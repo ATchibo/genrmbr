@@ -5,6 +5,8 @@ plugins {
 }
 dependencies {
     implementation(libs.ksp.symbol.processing)
+    implementation("com.squareup:kotlinpoet:2.1.0")
+    implementation("com.squareup:kotlinpoet-ksp:2.1.0")
 }
 
 group = "com.github.ATchibo"

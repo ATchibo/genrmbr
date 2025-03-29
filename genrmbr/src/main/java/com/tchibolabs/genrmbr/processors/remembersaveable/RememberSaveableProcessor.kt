@@ -70,63 +70,63 @@ class RememberSaveableProcessor(
         }
 
         // Get parameters needed for the function and saver
-        val functionParams: List<String> = getFunctionParams(classDeclaration, hasInjectorFn, injectorFn, useKoinInjection)
-        val invalidateParams: List<String> = getInvalidateRememberParams(classDeclaration)
-        val constructorArgs: List<String> = getConstructorArgs(classDeclaration)
-        val classesImports: List<String> = getClassesImports(classDeclaration)
-
-        // Collect parameters needed for the saver (excluding ones with Saveable annotation)
-        val saverParams = classDeclaration.primaryConstructor?.parameters
-            ?.filter { param ->
-                param.name?.asString() ?: return@filter false
-                // Skip parameters that are marked with @Saveable
-                !param.annotations.any { ann -> ann.shortName.asString() == ANNOTATION_SAVEABLE }
-            }
-            ?.mapNotNull { param -> param.name?.asString() }
-            ?: emptyList()
-
-        val hasRememberCoroutineScope = hasRememberCoroutineScope(classDeclaration)
-
-        val additionalImports = buildList {
-            add("import androidx.compose.runtime.saveable.Saver")
-            add("import androidx.compose.runtime.saveable.mapSaver")
-
-            if (hasRememberCoroutineScope) {
-                add("import androidx.compose.runtime.rememberCoroutineScope")
-            }
-            if (useKoinInjection) {
-                add("import org.koin.compose.koinInject")
-                add("import org.koin.core.parameter.parametersOf")
-            }
-        }
-
-        file.writer().use { writer ->
-            writer.write(
-                """
-                package $packageName
-                
-                import androidx.compose.runtime.Composable
-                import androidx.compose.runtime.saveable.rememberSaveable
-                ${classesImports.joinToString("\n")}
-                ${additionalImports.joinToString("\n")}
-                
-                @Composable
-                fun remember$className(${functionParams.joinToString()}): $className {
-                    return rememberSaveable(
-                        ${if (invalidateParams.isNotEmpty()) "${invalidateParams.joinToString(",")}," else ""}
-                        saver = get${className}Saver(
-                            ${saverParams.joinToString { "$it = $it" }}
-                        )
-                    ) {
-                        $className(${constructorArgs.joinToString()})
-                    }
-                }
-                """.trimIndent()
-            )
-        }
+//        val functionParams: List<String> = getFunctionParams(classDeclaration, hasInjectorFn, injectorFn, useKoinInjection)
+//        val invalidateParams: List<String> = getInvalidateRememberParams(classDeclaration)
+//        val constructorArgs: List<String> = getConstructorArgs(classDeclaration)
+//        val classesImports: List<String> = getClassesImports(classDeclaration)
+//
+//        // Collect parameters needed for the saver (excluding ones with Saveable annotation)
+//        val saverParams = classDeclaration.primaryConstructor?.parameters
+//            ?.filter { param ->
+//                param.name?.asString() ?: return@filter false
+//                // Skip parameters that are marked with @Saveable
+//                !param.annotations.any { ann -> ann.shortName.asString() == ANNOTATION_SAVEABLE }
+//            }
+//            ?.mapNotNull { param -> param.name?.asString() }
+//            ?: emptyList()
+//
+//        val hasRememberCoroutineScope = hasRememberCoroutineScope(classDeclaration)
+//
+//        val additionalImports = buildList {
+//            add("import androidx.compose.runtime.saveable.Saver")
+//            add("import androidx.compose.runtime.saveable.mapSaver")
+//
+//            if (hasRememberCoroutineScope) {
+//                add("import androidx.compose.runtime.rememberCoroutineScope")
+//            }
+//            if (useKoinInjection) {
+//                add("import org.koin.compose.koinInject")
+//                add("import org.koin.core.parameter.parametersOf")
+//            }
+//        }
+//
+//        file.writer().use { writer ->
+//            writer.write(
+//                """
+//                package $packageName
+//
+//                import androidx.compose.runtime.Composable
+//                import androidx.compose.runtime.saveable.rememberSaveable
+//                ${classesImports.joinToString("\n")}
+//                ${additionalImports.joinToString("\n")}
+//
+//                @Composable
+//                fun remember$className(${functionParams.joinToString()}): $className {
+//                    return rememberSaveable(
+//                        ${if (invalidateParams.isNotEmpty()) "${invalidateParams.joinToString(",")}," else ""}
+//                        saver = get${className}Saver(
+//                            ${saverParams.joinToString { "$it = $it" }}
+//                        )
+//                    ) {
+//                        $className(${constructorArgs.joinToString()})
+//                    }
+//                }
+//                """.trimIndent()
+//            )
+//        }
 
         // Generate the companion object with getSaver method
-        generateCompanionObject(classDeclaration, saveableFields, saveableParameters, saverParams)
+//        generateCompanionObject(classDeclaration, saveableFields, saveableParameters, saverParams)
     }
 
     private fun generateCompanionObject(
@@ -233,14 +233,6 @@ class RememberSaveableProcessor(
             ?.arguments
             ?.find { it.name?.asString() == "key" }
             ?.value as String
-
-    private fun getInvalidateRememberParams(
-        classDeclaration: KSClassDeclaration,
-    ): List<String> = classDeclaration.primaryConstructor?.parameters?.filter { param ->
-        param.annotations.any { it.shortName.asString() == ANNOTATION_KEY }
-    }?.mapNotNull { param ->
-        param.name?.asString() ?: return@mapNotNull null
-    } ?: emptyList()
 }
 
 // Helper class to store information about saveable items (fields or parameters)

@@ -7,13 +7,29 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.validate
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.CodeBlock
+import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ksp.toClassName
+import com.squareup.kotlinpoet.ksp.writeTo
 import com.tchibolabs.genrmbr.annotations.Remember
 import com.tchibolabs.genrmbr.processors.ANNOTATION_REMEMBER
+import com.tchibolabs.genrmbr.processors.composableAnnotation
 import com.tchibolabs.genrmbr.processors.getClassesImports
 import com.tchibolabs.genrmbr.processors.getConstructorArgs
+import com.tchibolabs.genrmbr.processors.getFunctionParamSpecs
 import com.tchibolabs.genrmbr.processors.getFunctionParams
 import com.tchibolabs.genrmbr.processors.getInjectorParameter
+import com.tchibolabs.genrmbr.processors.getInvalidateRememberParams
 import com.tchibolabs.genrmbr.processors.hasRememberCoroutineScope
+import com.tchibolabs.genrmbr.processors.koinInjectClassName
+import com.tchibolabs.genrmbr.processors.parametersOfClassName
+import com.tchibolabs.genrmbr.processors.prependTabs
+import com.tchibolabs.genrmbr.processors.rememberClassName
+import com.tchibolabs.genrmbr.processors.rememberCoroutineScopeClassName
 import com.tchibolabs.genrmbr.processors.usesKoinInjection
 
 class RememberProcessor(
@@ -36,59 +52,64 @@ class RememberProcessor(
     }
 
     private fun generateRememberFun(classDeclaration: KSClassDeclaration) {
-        val className = classDeclaration.simpleName.asString()
-        val packageName = classDeclaration.packageName.asString()
-
-        val file = codeGenerator.createNewFile(
-            dependencies = Dependencies.ALL_FILES,
-            packageName = packageName,
-            fileName = "Remember$className"
-        )
+        val className = classDeclaration.toClassName()
 
         val injectorFn = getInjectorParameter(ANNOTATION_REMEMBER, classDeclaration)
         val hasInjectorFn = injectorFn.isNotEmpty()
 
-        val functionParams: List<String> = getFunctionParams(classDeclaration, hasInjectorFn, injectorFn, useKoinInjection)
+        val functionParams: List<ParameterSpec> =
+            getFunctionParamSpecs(classDeclaration, hasInjectorFn, injectorFn, useKoinInjection)
         val invalidateParams: List<String> = getInvalidateRememberParams(classDeclaration)
         val constructorArgs: List<String> = getConstructorArgs(classDeclaration)
-        val classesImports: List<String> = getClassesImports(classDeclaration)
 
         val hasRememberCoroutineScope = hasRememberCoroutineScope(classDeclaration)
 
-        val additionalImports: List<String> = buildList {
+        val imports: List<ClassName> = buildList {
+            add(composableAnnotation)
+            add(rememberClassName)
+
             if (hasRememberCoroutineScope) {
-                add("import androidx.compose.runtime.rememberCoroutineScope")
+                add(rememberCoroutineScopeClassName)
             }
             if (useKoinInjection) {
-                add("import org.koin.compose.koinInject")
-                add("import org.koin.core.parameter.parametersOf")
+                add(koinInjectClassName)
+                add(parametersOfClassName)
             }
         }
 
-        file.writer().use { writer ->
-            writer.write(
-                """
-                package $packageName
-                
-                import androidx.compose.runtime.Composable
-                import androidx.compose.runtime.remember
-                ${classesImports.joinToString("\n")}
-                ${additionalImports.joinToString("\n")}
-                
-                @Composable
-                fun remember$className(${functionParams.joinToString()}): $className {
-                    return remember${if (invalidateParams.isNotEmpty()) "(${invalidateParams.joinToString(",")})" else ""} { $className(${constructorArgs.joinToString()}) }
-                }
-                """.trimIndent()
-            )
-        }
-    }
+        val rememberFunctionContent: CodeBlock = run {
+            val hasInvalidateParams = invalidateParams.isNotEmpty()
+            val blockBuilder = CodeBlock.builder()
 
-    private fun getInvalidateRememberParams(
-        classDeclaration: KSClassDeclaration,
-    ): List<String> = classDeclaration.primaryConstructor?.parameters?.filter { param ->
-        param.annotations.any { it.shortName.asString() == "InvalidateRemember" }
-    }?.mapNotNull { param ->
-        param.name?.asString() ?: return@mapNotNull null
-    } ?: emptyList()
+            if (hasInvalidateParams) {
+                blockBuilder.add("return remember(\n")
+                blockBuilder.add(invalidateParams.joinToString(",\n") { it.prependTabs() })
+                blockBuilder.add(") {\n")
+            } else {
+                blockBuilder.add("return remember {\n")
+            }
+
+            blockBuilder.add("${className.simpleName.prependTabs()}(\n")
+            blockBuilder.add(constructorArgs.joinToString(",\n") { it.prependTabs(2) })
+            blockBuilder.add("\n)".prependTabs())
+            blockBuilder.add("\n}")
+
+            blockBuilder.build()
+        }
+
+        val rememberFunction = FunSpec.builder("remember${className.simpleName}")
+            .addModifiers(KModifier.INTERNAL)
+            .addAnnotation(composableAnnotation)
+            .apply { functionParams.forEach { addParameter(it) } }
+            .addStatement(rememberFunctionContent.toString())
+            .returns(className)
+            .apply {  }
+            .build()
+
+        FileSpec.builder(className.packageName, "Remember${className.simpleName}")
+            .apply { imports.forEach { addImport(it.packageName, it.simpleName) } }
+            .addFunction(rememberFunction)
+            .build()
+            .writeTo(codeGenerator, Dependencies(true))
+    }
 }
