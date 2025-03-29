@@ -187,7 +187,7 @@ This library contains the following annotations:
 - ```@Key```
 - ```@Saveable```
 
-# @Remember
+### @Remember
 This annotation is put on the state class. Can receive a custom injector function as a parameter.
 The following code snippet:
 ```
@@ -208,7 +208,7 @@ fun rememberExampleState(
 }
 ```
 
-# @RememberSaveable
+### @RememberSaveable
 This annotation is put on the state class. Can receive a custom injector function as a parameter.
 The following code snippet:
 ```
@@ -247,7 +247,7 @@ fun rememberExampleState(
 // this is not very useful but by using @Saveable you can make it powerful
 ```
 
-# @Value
+### @Value
 This is the simplest annotation. This is used on a class parameter in order to give it a default value in the remember<className>() function.
 The following code snippet:
 ```
@@ -268,7 +268,7 @@ fun rememberExampleState(
 }
 ```
 
-# @DefaultInject
+### @DefaultInject
 This is used on a class parameter in order to give it a default value in the remember<className>() function. It should be used only if you configured default injection with Koin or if you set a default inject function as a parameter for ```@Remember``` or ```@RememberSaveable```.
 The annotation parameter function has higher priority over default project injection. ```CoroutineScope``` is always injected by default (no annotation needed).
 The following code snippet:
@@ -339,7 +339,7 @@ fun rememberExampleState(
 }
 ```
 
-# @Provide
+### @Provide
 This is a combination of ```@DefaultInject``` and an injector function. You pass a method name and that method will be called in order to give your parameter a default value.
 The following code snippet:
 ```
@@ -370,7 +370,7 @@ fun rememberExampleState(
 }
 ```
 
-# @Key
+### @Key
 You can annotate a class parameter in order to make ```remember``` and ```rememberSaveable``` invalidate when this value changes.
 The following code snippet:
 ```
@@ -393,7 +393,7 @@ fun rememberExampleState(
 }
 ```
 
-# @Saveable
+### @Saveable
 This annotation is designed only for classes annotated with ```@RememberSaveable``` and it is used in pairs. You should put ```@Saveable(<key>)``` on both the class parameter and the property which will use this default value. Make sure they have the same key.
 The following code snippet:
 ```
