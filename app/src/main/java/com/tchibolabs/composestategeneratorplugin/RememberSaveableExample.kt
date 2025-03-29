@@ -30,6 +30,8 @@ class RememberSaveableExampleState(
     @Key
     @DefaultInject("100", "\"yellow\"")
     private val duck: Duck,
+    @DefaultInject
+    private val duck1: Duck,
 ) {
     @Saveable("index")
     var index by mutableIntStateOf(initialIndex)
