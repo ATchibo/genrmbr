@@ -18,10 +18,8 @@ import com.squareup.kotlinpoet.ksp.writeTo
 import com.tchibolabs.genrmbr.annotations.Remember
 import com.tchibolabs.genrmbr.processors.ANNOTATION_REMEMBER
 import com.tchibolabs.genrmbr.processors.composableAnnotation
-import com.tchibolabs.genrmbr.processors.getClassesImports
 import com.tchibolabs.genrmbr.processors.getConstructorArgs
 import com.tchibolabs.genrmbr.processors.getFunctionParamSpecs
-import com.tchibolabs.genrmbr.processors.getFunctionParams
 import com.tchibolabs.genrmbr.processors.getInjectorParameter
 import com.tchibolabs.genrmbr.processors.getInvalidateRememberParams
 import com.tchibolabs.genrmbr.processors.hasRememberCoroutineScope
@@ -31,6 +29,7 @@ import com.tchibolabs.genrmbr.processors.prependTabs
 import com.tchibolabs.genrmbr.processors.rememberClassName
 import com.tchibolabs.genrmbr.processors.rememberCoroutineScopeClassName
 import com.tchibolabs.genrmbr.processors.usesKoinInjection
+import java.time.LocalDateTime
 
 class RememberProcessor(
     private val codeGenerator: CodeGenerator,
@@ -77,39 +76,46 @@ class RememberProcessor(
             }
         }
 
-        val rememberFunctionContent: CodeBlock = run {
-            val hasInvalidateParams = invalidateParams.isNotEmpty()
-            val blockBuilder = CodeBlock.builder()
-
-            if (hasInvalidateParams) {
-                blockBuilder.add("return remember(\n")
-                blockBuilder.add(invalidateParams.joinToString(",\n") { it.prependTabs() })
-                blockBuilder.add(") {\n")
-            } else {
-                blockBuilder.add("return remember {\n")
-            }
-
-            blockBuilder.add("${className.simpleName.prependTabs()}(\n")
-            blockBuilder.add(constructorArgs.joinToString(",\n") { it.prependTabs(2) })
-            blockBuilder.add("\n)".prependTabs())
-            blockBuilder.add("\n}")
-
-            blockBuilder.build()
-        }
+        val rememberFunctionContent: CodeBlock =
+            generateRememberFunctionContent(invalidateParams, className, constructorArgs)
 
         val rememberFunction = FunSpec.builder("remember${className.simpleName}")
             .addModifiers(KModifier.INTERNAL)
             .addAnnotation(composableAnnotation)
             .apply { functionParams.forEach { addParameter(it) } }
-            .addStatement(rememberFunctionContent.toString())
             .returns(className)
-            .apply {  }
+            .addStatement(rememberFunctionContent.toString())
             .build()
 
         FileSpec.builder(className.packageName, "Remember${className.simpleName}")
             .apply { imports.forEach { addImport(it.packageName, it.simpleName) } }
+            .addFileComment("This file was auto-generated on ${LocalDateTime.now()}. Do not modify.")
             .addFunction(rememberFunction)
             .build()
             .writeTo(codeGenerator, Dependencies(true))
+    }
+
+    private fun generateRememberFunctionContent(
+        invalidateParams: List<String>,
+        className: ClassName,
+        constructorArgs: List<String>
+    ): CodeBlock = run {
+        val hasInvalidateParams = invalidateParams.isNotEmpty()
+        val blockBuilder = CodeBlock.builder()
+
+        if (hasInvalidateParams) {
+            blockBuilder.add("return remember(\n")
+            blockBuilder.add(invalidateParams.joinToString(",\n") { it.prependTabs() })
+            blockBuilder.add(") {\n")
+        } else {
+            blockBuilder.add("return remember {\n")
+        }
+
+        blockBuilder.add("${className.simpleName.prependTabs()}(\n")
+        blockBuilder.add(constructorArgs.joinToString(",\n") { it.prependTabs(2) })
+        blockBuilder.add("\n)".prependTabs())
+        blockBuilder.add("\n}")
+
+        blockBuilder.build()
     }
 }

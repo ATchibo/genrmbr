@@ -3,6 +3,7 @@ package com.tchibolabs.genrmbr.processors
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSValueParameter
+import com.squareup.kotlinpoet.ANNOTATION
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.ParameterSpec
@@ -18,9 +19,12 @@ internal const val ANNOTATION_KEY = "Key"
 
 internal val composableAnnotation = ClassName("androidx.compose.runtime", "Composable")
 internal val rememberClassName = ClassName("androidx.compose.runtime", "remember")
+internal val rememberSaveableClassName = ClassName("androidx.compose.runtime.saveable", "rememberSaveable")
 internal val rememberCoroutineScopeClassName = ClassName("androidx.compose.runtime", "rememberCoroutineScope")
 internal val koinInjectClassName = ClassName("org.koin.compose", "koinInject")
 internal val parametersOfClassName = ClassName("org.koin.core.parameter", "parametersOf")
+internal val saverClassName = ClassName("androidx.compose.runtime.saveable", "Saver")
+internal val mapSaverClassName = ClassName("androidx.compose.runtime.saveable", "mapSaver")
 
 private const val TAB = "  "
 
@@ -66,7 +70,7 @@ internal fun getFunctionParamSpecs(
                 val parameters = getAnnotationArgument<List<*>>(defaultInjectAnnotation, "params")
 
                 val parametersString = if (parameters?.isEmpty() == true) ""
-                else parameters?.joinToString(",")
+                else parameters?.joinToString(", ")
 
                 when {
                     hasInjectorFn -> {
@@ -106,102 +110,6 @@ internal fun getFunctionParamSpecs(
         }
     } ?: emptyList()
 
-internal fun getFunctionParams(
-    classDeclaration: KSClassDeclaration,
-    hasInjectorFn: Boolean,
-    injectorFn: String,
-    useKoinInjection: Boolean
-): List<String> =
-    classDeclaration.primaryConstructor?.parameters?.mapNotNull { param ->
-        val name = param.name?.asString() ?: return@mapNotNull null
-        val typeString = getParameterTypeString(param)
-
-        val defaultValue = when {
-            param.annotations.any { it.shortName.asString() == ANNOTATION_VALUE } -> {
-                val annotation =
-                    param.annotations.first { it.shortName.asString() == ANNOTATION_VALUE }
-                val value =
-                    annotation.arguments.firstOrNull { it.name?.asString() == "value" }?.value as? String
-
-                if (value != null) {
-                    "$name: $typeString = $value"
-                } else {
-                    "$name: $typeString"
-                }
-            }
-
-            param.annotations.any { it.shortName.asString() == ANNOTATION_DEFAULT_INJECT } -> {
-                val annotation =
-                    param.annotations.first { it.shortName.asString() == ANNOTATION_DEFAULT_INJECT }
-                val parameters =
-                    annotation.arguments.firstOrNull { it.name?.asString() == "params" }?.value as? List<*>
-
-                val parametersString = if (parameters?.isEmpty() == true) ""
-                else parameters?.joinToString(",")
-
-                when {
-                    hasInjectorFn -> {
-                        "$name: $typeString = $injectorFn<$typeString>($parametersString)"
-                    }
-
-                    useKoinInjection -> {
-                        if (parametersString.isNullOrEmpty()) {
-                            "$name: $typeString = koinInject()"
-                        } else {
-                            "$name: $typeString = koinInject { parametersOf($parametersString) }"
-                        }
-                    }
-
-                    else -> throw Exception("Cannot determine inject function")
-                }
-            }
-
-            param.annotations.any { it.shortName.asString() == ANNOTATION_PROVIDE } -> {
-                val annotation =
-                    param.annotations.first { it.shortName.asString() == ANNOTATION_PROVIDE }
-                val providerFunction = annotation.arguments.firstOrNull()?.value as? String
-                    ?: "error(\"No provider function specified\")"
-                "$name: $typeString = $providerFunction()"
-            }
-
-            param.type.resolve().declaration.qualifiedName?.asString() == "kotlinx.coroutines.CoroutineScope" -> {
-                "$name: $typeString = rememberCoroutineScope()"
-            }
-
-            else -> "$name: $typeString"
-        }
-
-        defaultValue
-    } ?: emptyList()
-
-internal fun getParameterTypeString(param: KSValueParameter): String? {
-    val type =
-        param.type.resolve().declaration.qualifiedName?.asString() ?: return null
-    val superTypes = param.type.resolve().arguments.map {
-        it.type?.resolve()?.declaration?.qualifiedName?.asString()
-    }
-
-    return buildString {
-        if (superTypes.isEmpty()) append(type)
-        else append("$type<${superTypes.joinToString(",")}>")
-
-        if (param.type.resolve().isMarkedNullable) {
-            append("?")
-        }
-    }
-}
-
-internal fun getClassesImports(classDeclaration: KSClassDeclaration): List<String> {
-    return classDeclaration.getAllProperties()
-        .mapNotNull { property ->
-            val type = property.type.resolve()
-            val typeName = type.declaration.qualifiedName?.asString()
-            if (typeName != null && !typeName.startsWith("kotlin.")) typeName else null
-        }
-        .toSet() // Ensure unique imports
-        .map { "import $it" }
-}
-
 internal fun getConstructorArgs(classDeclaration: KSClassDeclaration): List<String> {
     return classDeclaration.primaryConstructor?.parameters?.mapNotNull { param ->
         param.name?.asString()
@@ -216,16 +124,19 @@ internal fun hasRememberCoroutineScope(classDeclaration: KSClassDeclaration) =
 internal fun getInvalidateRememberParams(
     classDeclaration: KSClassDeclaration,
 ): List<String> = classDeclaration.primaryConstructor?.parameters?.filter { param ->
-    param.annotations.any { it.shortName.asString() == "InvalidateRemember" }
+    getAnnotation(param, ANNOTATION_KEY) != null
 }?.mapNotNull { param ->
-    param.name?.asString() ?: return@mapNotNull null
+    param.name?.asString()
 } ?: emptyList()
 
 internal fun String.prependTabs(tabsNr: Int = 1) =
     this.prependIndent(TAB.repeat(tabsNr))
 
-private fun getAnnotation(param: KSValueParameter, name: String) =
-    param.annotations.find { it.shortName.asString() == name }
+internal fun getAnnotation(param: KSValueParameter, name: String) =
+    getAnnotation(param.annotations, name)
+
+internal fun getAnnotation(annotations: Sequence<KSAnnotation>, name: String) =
+    annotations.find { it.shortName.asString() == name }
 
 @Suppress("UNCHECKED_CAST")
 private fun <T> getAnnotationArgument(annotation: KSAnnotation?, paramName: String): T? =

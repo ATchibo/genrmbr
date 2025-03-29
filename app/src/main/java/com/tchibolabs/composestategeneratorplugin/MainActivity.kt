@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
                             .padding(innerPadding)
                     ) {
                         RememberExample()
-//                        RememberSaveableExample()
+                        RememberSaveableExample()
                     }
                 }
             }

@@ -8,17 +8,36 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.validate
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.CodeBlock
+import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.STAR
+import com.squareup.kotlinpoet.ksp.toClassName
+import com.squareup.kotlinpoet.ksp.toTypeName
+import com.squareup.kotlinpoet.ksp.writeTo
 import com.tchibolabs.genrmbr.annotations.RememberSaveable
-import com.tchibolabs.genrmbr.processors.ANNOTATION_KEY
 import com.tchibolabs.genrmbr.processors.ANNOTATION_REMEMBER_SAVEABLE
 import com.tchibolabs.genrmbr.processors.ANNOTATION_SAVEABLE
-import com.tchibolabs.genrmbr.processors.getClassesImports
+import com.tchibolabs.genrmbr.processors.composableAnnotation
+import com.tchibolabs.genrmbr.processors.getAnnotation
 import com.tchibolabs.genrmbr.processors.getConstructorArgs
-import com.tchibolabs.genrmbr.processors.getFunctionParams
+import com.tchibolabs.genrmbr.processors.getFunctionParamSpecs
 import com.tchibolabs.genrmbr.processors.getInjectorParameter
-import com.tchibolabs.genrmbr.processors.getParameterTypeString
+import com.tchibolabs.genrmbr.processors.getInvalidateRememberParams
 import com.tchibolabs.genrmbr.processors.hasRememberCoroutineScope
+import com.tchibolabs.genrmbr.processors.koinInjectClassName
+import com.tchibolabs.genrmbr.processors.mapSaverClassName
+import com.tchibolabs.genrmbr.processors.parametersOfClassName
+import com.tchibolabs.genrmbr.processors.prependTabs
+import com.tchibolabs.genrmbr.processors.rememberCoroutineScopeClassName
+import com.tchibolabs.genrmbr.processors.rememberSaveableClassName
+import com.tchibolabs.genrmbr.processors.saverClassName
 import com.tchibolabs.genrmbr.processors.usesKoinInjection
+import java.time.LocalDateTime
 
 class RememberSaveableProcessor(
     private val codeGenerator: CodeGenerator,
@@ -39,24 +58,21 @@ class RememberSaveableProcessor(
         return emptyList()
     }
 
-    private fun generateRememberSaveableFun(
-        classDeclaration: KSClassDeclaration,
-    ) {
-        val className = classDeclaration.simpleName.asString()
-        val packageName = classDeclaration.packageName.asString()
-
-        val file = codeGenerator.createNewFile(
-            dependencies = Dependencies.ALL_FILES,
-            packageName = packageName,
-            fileName = "RememberSaveable$className"
-        )
+    private fun generateRememberSaveableFun(classDeclaration: KSClassDeclaration) {
+        val className = classDeclaration.toClassName()
 
         val injectorFn = getInjectorParameter(ANNOTATION_REMEMBER_SAVEABLE, classDeclaration)
         val hasInjectorFn = injectorFn.isNotEmpty()
 
-        // Collect saveable fields - both properties and constructor parameters
-        val saveableFields = getSaveableFields(classDeclaration)
+        val functionParams: List<ParameterSpec> =
+            getFunctionParamSpecs(classDeclaration, hasInjectorFn, injectorFn, useKoinInjection)
+        val invalidateParams: List<String> = getInvalidateRememberParams(classDeclaration)
+        val constructorArgs: List<String> = getConstructorArgs(classDeclaration)
+
+        val hasRememberCoroutineScope = hasRememberCoroutineScope(classDeclaration)
+
         val saveableParameters = getSaveableParameters(classDeclaration)
+        val saveableFields = getSaveableFields(classDeclaration)
 
         try {
             assert(saveableFields.size == saveableParameters.size)
@@ -69,141 +85,130 @@ class RememberSaveableProcessor(
             throw Exception("Not all @Saveable class parameters have a matching property!")
         }
 
-        // Get parameters needed for the function and saver
-//        val functionParams: List<String> = getFunctionParams(classDeclaration, hasInjectorFn, injectorFn, useKoinInjection)
-//        val invalidateParams: List<String> = getInvalidateRememberParams(classDeclaration)
-//        val constructorArgs: List<String> = getConstructorArgs(classDeclaration)
-//        val classesImports: List<String> = getClassesImports(classDeclaration)
-//
-//        // Collect parameters needed for the saver (excluding ones with Saveable annotation)
-//        val saverParams = classDeclaration.primaryConstructor?.parameters
-//            ?.filter { param ->
-//                param.name?.asString() ?: return@filter false
-//                // Skip parameters that are marked with @Saveable
-//                !param.annotations.any { ann -> ann.shortName.asString() == ANNOTATION_SAVEABLE }
-//            }
-//            ?.mapNotNull { param -> param.name?.asString() }
-//            ?: emptyList()
-//
-//        val hasRememberCoroutineScope = hasRememberCoroutineScope(classDeclaration)
-//
-//        val additionalImports = buildList {
-//            add("import androidx.compose.runtime.saveable.Saver")
-//            add("import androidx.compose.runtime.saveable.mapSaver")
-//
-//            if (hasRememberCoroutineScope) {
-//                add("import androidx.compose.runtime.rememberCoroutineScope")
-//            }
-//            if (useKoinInjection) {
-//                add("import org.koin.compose.koinInject")
-//                add("import org.koin.core.parameter.parametersOf")
-//            }
-//        }
-//
-//        file.writer().use { writer ->
-//            writer.write(
-//                """
-//                package $packageName
-//
-//                import androidx.compose.runtime.Composable
-//                import androidx.compose.runtime.saveable.rememberSaveable
-//                ${classesImports.joinToString("\n")}
-//                ${additionalImports.joinToString("\n")}
-//
-//                @Composable
-//                fun remember$className(${functionParams.joinToString()}): $className {
-//                    return rememberSaveable(
-//                        ${if (invalidateParams.isNotEmpty()) "${invalidateParams.joinToString(",")}," else ""}
-//                        saver = get${className}Saver(
-//                            ${saverParams.joinToString { "$it = $it" }}
-//                        )
-//                    ) {
-//                        $className(${constructorArgs.joinToString()})
-//                    }
-//                }
-//                """.trimIndent()
-//            )
-//        }
+        val saverParams = classDeclaration.primaryConstructor?.parameters?.filter { param ->
+            getAnnotation(param, ANNOTATION_SAVEABLE) == null
+        }?.mapNotNull { param ->
+            val name = param.name?.asString() ?: return@mapNotNull null
+            val type = param.type.toTypeName()
+            ParameterSpec(name, type)
+        } ?: emptyList()
 
-        // Generate the companion object with getSaver method
-//        generateCompanionObject(classDeclaration, saveableFields, saveableParameters, saverParams)
-    }
-
-    private fun generateCompanionObject(
-        classDeclaration: KSClassDeclaration,
-        saveableItems: List<SaveableItemInfo>,
-        saveableParameters: List<SaveableItemInfo>,
-        saverParams: List<String>
-    ) {
-        val className = classDeclaration.simpleName.asString()
-        val packageName = classDeclaration.packageName.asString()
-
-        val file = codeGenerator.createNewFile(
-            dependencies = Dependencies.ALL_FILES,
-            packageName = packageName,
-            fileName = "${className}Companion"
-        )
-
-        // Generate parameter declarations for getSaver method
-        val saverParamDeclarations = classDeclaration.primaryConstructor?.parameters
-            ?.filter { param -> saverParams.contains(param.name?.asString()) }
-            ?.mapNotNull { param ->
-                val name = param.name?.asString() ?: return@mapNotNull null
-                val typeString = getParameterTypeString(param)
-                "$name: $typeString"
-            } ?: emptyList()
-
-        // Generate save map entries using specified keys
-        val saveEntries = saveableItems.map { item ->
-            "            \"${item.key}\" to it.${item.name}"
-        }
-
-        // Generate restore parameters
         val restoreParams = classDeclaration.primaryConstructor?.parameters?.mapNotNull { param ->
             val name = param.name?.asString() ?: return@mapNotNull null
 
             val saveableItem = saveableParameters.find { it.name == name }
             if (saveableItem != null) {
-                val typeString = getParameterTypeString(param)
-                "$name = it[\"${saveableItem.key}\"] as $typeString"
+                val type = param.type.toTypeName()
+                "$name = it[\"${saveableItem.key}\"] as $type"
             } else {
                 "$name = $name"
             }
         } ?: emptyList()
 
-        file.writer().use { writer ->
-            writer.write(
-                """
-                package $packageName
-                
-                import androidx.compose.runtime.saveable.Saver
-                import androidx.compose.runtime.saveable.mapSaver
-                
-                // This file is auto-generated. Do not modify.
-                
-                // Extension to provide companion object for $className
-                fun get${className}Saver(
-                    ${saverParamDeclarations.joinToString(",\n        ")}
-                ): Saver<$className, *> = mapSaver(
-                    save = { mapOf(
-                        ${saveEntries.joinToString(",\n            ")}
-                    )},
-                    restore = {
-                        $className(
-                            ${restoreParams.joinToString(",\n                    ")}
-                        )
-                    }
-                )
-                """.trimIndent()
-            )
+        val imports: List<ClassName> = buildList {
+            add(composableAnnotation)
+            add(rememberSaveableClassName)
+            add(saverClassName)
+            add(mapSaverClassName)
+
+            if (hasRememberCoroutineScope) {
+                add(rememberCoroutineScopeClassName)
+            }
+            if (useKoinInjection) {
+                add(koinInjectClassName)
+                add(parametersOfClassName)
+            }
         }
+
+        val saverFunctionContent: CodeBlock = generateSaverFunctionContent(saveableFields, className, restoreParams)
+
+        val saverFunction = FunSpec.builder("get${className.simpleName}Saver")
+            .addModifiers(KModifier.INTERNAL)
+            .apply { saverParams.forEach { addParameter(it) } }
+            .addStatement(saverFunctionContent.toString())
+            .returns(saverClassName.parameterizedBy(className, STAR))
+            .build()
+
+        val rememberSaveableFunctionContent: CodeBlock =
+            generateRememberSaveableFunctionContent(invalidateParams, className, constructorArgs, saverParams)
+
+        val rememberSaveableFunction = FunSpec.builder("remember${className.simpleName}")
+            .addModifiers(KModifier.INTERNAL)
+            .addAnnotation(composableAnnotation)
+            .apply { functionParams.forEach { addParameter(it) } }
+            .addStatement(rememberSaveableFunctionContent.toString())
+            .returns(className)
+            .build()
+
+        FileSpec.builder(className.packageName, "RememberSaveable${className.simpleName}")
+            .apply { imports.forEach { addImport(it.packageName, it.simpleName) } }
+            .addFileComment("This file was auto-generated on ${LocalDateTime.now()}. Do not modify.")
+            .addFunction(saverFunction)
+            .addFunction(rememberSaveableFunction)
+            .build()
+            .writeTo(codeGenerator, Dependencies(true))
+    }
+
+    private fun generateSaverFunctionContent(
+        saveableFields: List<SaveableItemInfo>,
+        className: ClassName,
+        restoreParams: List<String>
+    ): CodeBlock = run {
+        val blockBuilder = CodeBlock.builder()
+
+        blockBuilder.add("return mapSaver(")
+        blockBuilder.add("\nsave = { mapOf(".prependTabs())
+        saveableFields.forEach { item ->
+            blockBuilder.add("\n%S to it.${item.name},".prependTabs(2), item.key)
+        }
+        blockBuilder.add("\n) },".prependTabs())
+        blockBuilder.add("\nrestore = {".prependTabs())
+        blockBuilder.add("\n${className.simpleName}(".prependTabs(2))
+        restoreParams.forEach { param ->
+            blockBuilder.add("\n$param,".prependTabs(3))
+        }
+        blockBuilder.add("\n)".prependTabs(2))
+        blockBuilder.add("\n}".prependTabs())
+        blockBuilder.add("\n)")
+        blockBuilder.build()
+    }
+
+    private fun generateRememberSaveableFunctionContent(
+        invalidateParams: List<String>,
+        className: ClassName,
+        constructorArgs: List<String>,
+        saverParams: List<ParameterSpec>
+    ): CodeBlock = run {
+        val hasInvalidateParams = invalidateParams.isNotEmpty()
+        val blockBuilder = CodeBlock.builder()
+
+        blockBuilder.add("return rememberSaveable(")
+
+        if (hasInvalidateParams) {
+            invalidateParams.forEach { param ->
+                blockBuilder.add("\n$param,".prependTabs())
+            }
+        }
+
+        blockBuilder.add("\nsaver = get${className.simpleName}Saver(".prependTabs())
+        saverParams.forEach {
+            blockBuilder.add("\n${it.name},".prependTabs(2))
+        }
+        blockBuilder.add("\n)".prependTabs())
+        if (saverParams.isNotEmpty()) blockBuilder.add("\n")
+        blockBuilder.add(") {\n")
+
+        blockBuilder.add("${className.simpleName.prependTabs()}(\n")
+        blockBuilder.add(constructorArgs.joinToString(",\n") { it.prependTabs(2) })
+        blockBuilder.add("\n)".prependTabs())
+        blockBuilder.add("\n}")
+
+        blockBuilder.build()
     }
 
     private fun getSaveableFields(classDeclaration: KSClassDeclaration): List<SaveableItemInfo> {
         return classDeclaration.getAllProperties()
-            .filter { prop ->
-                prop.annotations.any { ann -> ann.shortName.asString() == ANNOTATION_SAVEABLE }
-            }
+            .filter { prop -> getAnnotation(prop.annotations, ANNOTATION_SAVEABLE) != null }
             .map { prop ->
                 val name = prop.simpleName.asString()
                 val key = getSaveableKey(prop.annotations)
@@ -215,9 +220,7 @@ class RememberSaveableProcessor(
 
     private fun getSaveableParameters(classDeclaration: KSClassDeclaration): List<SaveableItemInfo> {
         return classDeclaration.primaryConstructor?.parameters
-            ?.filter { param ->
-                param.annotations.any { ann -> ann.shortName.asString() == ANNOTATION_SAVEABLE }
-            }
+            ?.filter { param -> getAnnotation(param, ANNOTATION_SAVEABLE) != null }
             ?.map { param ->
                 val name = param.name?.asString() ?: ""
                 val key = getSaveableKey(param.annotations)
