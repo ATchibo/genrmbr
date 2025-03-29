@@ -433,5 +433,4 @@ fun rememberExampleState(
         saver = getExampleStateSaver(nr = nr)
     ) { ExampleState(nr, user) }
 }
-// this is not very useful but by using @Saveable you can make it powerful
 ```
