@@ -10,7 +10,7 @@ forgetmenot is a Kotlin library intended for generating remember and rememberSav
 
 ### Step 1: Add the JitPack repository to your build file 
 Add it in your settings.gradle.kts at the end of repositories:
-```
+```gradle
 dependencyResolutionManagement {
   repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
   repositories {
@@ -22,7 +22,7 @@ dependencyResolutionManagement {
 
 ### Step 2: Add KSP
 Add this to your module's build.gradle file. You can also check [the quickstart guide](https://kotlinlang.org/docs/ksp-quickstart.html):
-```
+```gradle
 plugins {
     id("com.google.devtools.ksp") version <ksp-version>
 }
@@ -30,7 +30,7 @@ plugins {
 
 ### Step 3: Add the dependency
 Add this to your module's build.gradle file:
-```
+```gradle
 dependencies {
   implementation("com.github.ATchibo:forgetmenot:<version>")
   ksp("com.github.ATchibo:forgetmenot:<version>")
@@ -39,7 +39,7 @@ dependencies {
 
 ### Step 4 (optional): Add support for Koin
 Add this to your module's build.gradle:
-```
+```gradle
 android {
     ...
     defaultConfig {
@@ -53,7 +53,7 @@ android {
 
 ## Example Usages
 We have our composable with a state:
-```
+```kotlin
 class ExampleState(
     initialIndex: Int,
     private val user: User,
@@ -94,7 +94,7 @@ fun Example(
 }
 ```
 with these data classes:
-```
+```kotlin
 data class Duck(
     val speed: Int = 300,
     val color: String = "white",
@@ -106,7 +106,7 @@ data class User(
 )
 ```
 and this usecase:
-```
+```kotlin
 fun interface GetAgencies {
     operator fun invoke(): Flow<List<Agency>>
 }
@@ -120,7 +120,7 @@ class GetAgenciesUseCase(
 ```
 
 In order to create a remembered instance of ```RememberExampleState```, you would normally need to write something like this:
-```
+```kotlin
 @Composable
 fun rememberExampleState(
     initialIndex:Int,
@@ -134,7 +134,7 @@ fun rememberExampleState(
 ```
 
 This is not so bad, but for states with a lot of parameters, this can grow big quickly. Not to mention what happens when you want to generate a rememberSaveable function:
-```
+```kotlin
 fun getExampleStateSaver(
     user: User,
     duck: Duck,
@@ -190,7 +190,7 @@ This library contains the following annotations:
 ### @Remember
 This annotation is put on the state class. Can receive a custom injector function as a parameter.
 The following code snippet:
-```
+```kotlin
 @Remember
 class ExampleState (
   val nr: Int,
@@ -198,7 +198,7 @@ class ExampleState (
 )
 ```
 will generate:
-```
+```kotlin
 @Composable
 fun rememberExampleState(
     nr: kotlin.Int,
@@ -211,7 +211,7 @@ fun rememberExampleState(
 ### @RememberSaveable
 This annotation is put on the state class. Can receive a custom injector function as a parameter.
 The following code snippet:
-```
+```kotlin
 @RememberSaveable
 class ExampleState (
   val nr: Int,
@@ -219,7 +219,7 @@ class ExampleState (
 )
 ```
 will generate:
-```
+```kotlin
 fun getExampleStateSaver(
     nr: kotlin.Int,
     user: <path>.User,
@@ -234,7 +234,7 @@ fun getExampleStateSaver(
 )
 ```
 and
-```
+```kotlin
 @Composable
 fun rememberExampleState(
     nr: kotlin.Int,
@@ -250,7 +250,7 @@ fun rememberExampleState(
 ### @Value
 This is the simplest annotation. This is used on a class parameter in order to give it a default value in the remember<className>() function.
 The following code snippet:
-```
+```kotlin
 @Remember
 class ExampleState (
   val nr: Int,
@@ -258,7 +258,7 @@ class ExampleState (
 )
 ```
 will generate:
-```
+```kotlin
 @Composable
 fun rememberExampleState(
     nr: kotlin.Int,
@@ -272,7 +272,7 @@ fun rememberExampleState(
 This is used on a class parameter in order to give it a default value in the remember<className>() function. It should be used only if you configured default injection with Koin or if you set a default inject function as a parameter for ```@Remember``` or ```@RememberSaveable```.
 The annotation parameter function has higher priority over default project injection. ```CoroutineScope``` is always injected by default (no annotation needed).
 The following code snippet:
-```
+```kotlin
 inline fun <reified T> injectClass(): T = when {
     T::class == User::class -> User() as T
     else -> Duck() as T
@@ -290,7 +290,7 @@ class ExampleState(
 ) {
 ```
 will generate the following code even if you have set default project injection:
-```
+```kotlin
 @Composable
 fun rememberExampleState(
     initialIndex: kotlin.Int = 10,
@@ -302,7 +302,7 @@ fun rememberExampleState(
 }
 ```
 If you do not pass an injector for ```@Remember``` or ```@RememberSaveable``` and you use Koin injection, the generated code will look like this:
-```
+```kotlin
 @Composable
 fun rememberExampleState(
     initialIndex: kotlin.Int = 10,
@@ -314,7 +314,7 @@ fun rememberExampleState(
 }
 ```
 You can pass arguments to ```@DefaultInject``` which will be used by the injector function (works for both cases):
-```
+```kotlin
 @Remember(injector = "injectClass")
 class ExampleState(
     @Value("10")
@@ -327,7 +327,7 @@ class ExampleState(
 ) {
 ```
 will generate:
-```
+```kotlin
 @Composable
 fun rememberExampleState(
     initialIndex: kotlin.Int = 10,
@@ -342,7 +342,7 @@ fun rememberExampleState(
 ### @Provide
 This is a combination of ```@DefaultInject``` and an injector function. You pass a method name and that method will be called in order to give your parameter a default value.
 The following code snippet:
-```
+```kotlin
 inline fun <reified T> injectClass(): T = when {
     T::class == User::class -> User() as T
     else -> Duck() as T
@@ -359,7 +359,7 @@ class ExampleState(
 ) {
 ```
 will generate the following code ignoring any other injector:
-```
+```kotlin
 @Composable
 fun rememberExampleState(
     initialIndex: kotlin.Int = 10,
@@ -373,7 +373,7 @@ fun rememberExampleState(
 ### @Key
 You can annotate a class parameter in order to make ```remember``` and ```rememberSaveable``` invalidate when this value changes.
 The following code snippet:
-```
+```kotlin
 @Remember
 class ExampleState (
   @Key val nr1: Int,
@@ -382,7 +382,7 @@ class ExampleState (
 )
 ```
 will generate:
-```
+```kotlin
 @Composable
 fun rememberExampleState(
     nr1: kotlin.Int,
@@ -396,7 +396,7 @@ fun rememberExampleState(
 ### @Saveable
 This annotation is designed only for classes annotated with ```@RememberSaveable``` and it is used in pairs. You should put ```@Saveable(<key>)``` on both the class parameter and the property which will use this default value. Make sure they have the same key.
 The following code snippet:
-```
+```kotlin
 @RememberSaveable
 class ExampleState (
   @Key val nr: Int,
@@ -408,7 +408,7 @@ class ExampleState (
 }
 ```
 will generate:
-```
+```kotlin
 fun getExampleStateSaver(
     nr: kotlin.Int,  // initialUser is no longer added as a saver parameter
 ): Saver<ExampleState, *> = mapSaver(
@@ -422,7 +422,7 @@ fun getExampleStateSaver(
 )
 ```
 and
-```
+```kotlin
 @Composable
 fun rememberExampleState(
     nr: kotlin.Int,
