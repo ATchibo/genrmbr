@@ -12,12 +12,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tchibolabs.genrmbr.annotations.DefaultInject
-import com.tchibolabs.genrmbr.annotations.Key
-import com.tchibolabs.genrmbr.annotations.Provide
-import com.tchibolabs.genrmbr.annotations.RememberSaveable
-import com.tchibolabs.genrmbr.annotations.Saveable
-import com.tchibolabs.genrmbr.annotations.Value
+import com.tchibolabs.forgetmenot.annotations.DefaultInject
+import com.tchibolabs.forgetmenot.annotations.Key
+import com.tchibolabs.forgetmenot.annotations.Provide
+import com.tchibolabs.forgetmenot.annotations.Saveable
+import com.tchibolabs.forgetmenot.annotations.RememberSaveable
+import com.tchibolabs.forgetmenot.annotations.Value
 
 @RememberSaveable
 class RememberSaveableExampleState(
@@ -25,13 +25,13 @@ class RememberSaveableExampleState(
     @Saveable("index")
     @Key
     initialIndex: Int,
-    @DefaultInject
+    @Provide("injectClass<User>")
     private val user: User,
     @Key
-    @Provide("injectClass<Duck>")
+    @DefaultInject("100", "\"yellow\"")
     private val duck: Duck,
-    @Value("Duck()")
-    val duck1: Duck,
+    @DefaultInject
+    private val duck1: Duck,
 ) {
     @Saveable("index")
     var index by mutableIntStateOf(initialIndex)
@@ -57,6 +57,5 @@ fun RememberSaveableExample(
         Text("Saveable Index: ${state.index}")
         Text("Saveable User: ${state.myUser}")
         Text("Saveable Duck: ${state.myDuck}")
-        Text("Saveable Duck1: ${state.duck1}")
     }
 }

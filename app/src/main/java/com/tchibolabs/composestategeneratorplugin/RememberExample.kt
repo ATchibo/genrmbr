@@ -12,11 +12,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.tchibolabs.genrmbr.annotations.DefaultInject
-import com.tchibolabs.genrmbr.annotations.Key
-import com.tchibolabs.genrmbr.annotations.Provide
-import com.tchibolabs.genrmbr.annotations.Remember
-import com.tchibolabs.genrmbr.annotations.Value
+import com.tchibolabs.forgetmenot.annotations.DefaultInject
+import com.tchibolabs.forgetmenot.annotations.Key
+import com.tchibolabs.forgetmenot.annotations.Provide
+import com.tchibolabs.forgetmenot.annotations.Remember
+import com.tchibolabs.forgetmenot.annotations.Value
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
