@@ -104,14 +104,16 @@ class RememberProcessor(
         val blockBuilder = CodeBlock.builder()
 
         if (hasInvalidateParams) {
-            blockBuilder.add("return remember(\n")
-            blockBuilder.add(invalidateParams.joinToString(",\n") { it.prependTabs() })
-            blockBuilder.add(") {\n")
+            blockBuilder.add("return remember(")
+            invalidateParams.forEach { param ->
+                blockBuilder.add("\n$param,".prependTabs())
+            }
+            blockBuilder.add("\n) {")
         } else {
-            blockBuilder.add("return remember {\n")
+            blockBuilder.add("return remember {")
         }
 
-        blockBuilder.add("${className.simpleName.prependTabs()}(\n")
+        blockBuilder.add("\n${className.simpleName.prependTabs()}(\n")
         blockBuilder.add(constructorArgs.joinToString(",\n") { it.prependTabs(2) })
         blockBuilder.add("\n)".prependTabs())
         blockBuilder.add("\n}")
