@@ -19,6 +19,7 @@ import com.tchibolabs.forgetmenot.annotations.Remember
 import com.tchibolabs.forgetmenot.processors.ANNOTATION_REMEMBER
 import com.tchibolabs.forgetmenot.processors.composableAnnotation
 import com.tchibolabs.forgetmenot.processors.getConstructorArgs
+import com.tchibolabs.forgetmenot.processors.getCreatedAtMessage
 import com.tchibolabs.forgetmenot.processors.getFunctionParamSpecs
 import com.tchibolabs.forgetmenot.processors.getInjectorParameter
 import com.tchibolabs.forgetmenot.processors.getInvalidateRememberParams
@@ -29,7 +30,6 @@ import com.tchibolabs.forgetmenot.processors.prependTabs
 import com.tchibolabs.forgetmenot.processors.rememberClassName
 import com.tchibolabs.forgetmenot.processors.rememberCoroutineScopeClassName
 import com.tchibolabs.forgetmenot.processors.usesKoinInjection
-import java.time.LocalDateTime
 
 class RememberProcessor(
     private val codeGenerator: CodeGenerator,
@@ -89,7 +89,7 @@ class RememberProcessor(
 
         FileSpec.builder(className.packageName, "Remember${className.simpleName}")
             .apply { imports.forEach { addImport(it.packageName, it.simpleName) } }
-            .addFileComment("This file was auto-generated on ${LocalDateTime.now()}. Do not modify.")
+            .addFileComment(getCreatedAtMessage())
             .addFunction(rememberFunction)
             .build()
             .writeTo(codeGenerator, Dependencies(true))

@@ -7,6 +7,8 @@ import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.ParameterSpec
 import com.squareup.kotlinpoet.ksp.toTypeName
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 internal const val ANNOTATION_VALUE = "Value"
 internal const val ANNOTATION_DEFAULT_INJECT = "DefaultInject"
@@ -50,6 +52,7 @@ internal fun getFunctionParamSpecs(
     classDeclaration.primaryConstructor?.parameters?.mapNotNull { param ->
         val name = param.name?.asString() ?: return@mapNotNull null
         val type = param.type.toTypeName()
+        val typeSimpleName = param.type.resolve().declaration.simpleName.asString()
 
         val paramBuilder = ParameterSpec.builder(name, type)
 
@@ -73,7 +76,7 @@ internal fun getFunctionParamSpecs(
 
                 when {
                     hasInjectorFn -> {
-                        paramBuilder.defaultValue("$injectorFn<$type>($parametersString)")
+                        paramBuilder.defaultValue("$injectorFn<$typeSimpleName>($parametersString)")
                             .build()
                     }
 
@@ -136,6 +139,9 @@ internal fun getAnnotation(param: KSValueParameter, name: String) =
 
 internal fun getAnnotation(annotations: Sequence<KSAnnotation>, name: String) =
     annotations.find { it.shortName.asString() == name }
+
+internal fun getCreatedAtMessage() =
+    "This file was auto-generated on ${ZonedDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss zz"))}. Do not modify."
 
 @Suppress("UNCHECKED_CAST")
 private fun <T> getAnnotationArgument(annotation: KSAnnotation?, paramName: String): T? =

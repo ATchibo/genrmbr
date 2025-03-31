@@ -25,6 +25,7 @@ import com.tchibolabs.forgetmenot.processors.ANNOTATION_SAVEABLE
 import com.tchibolabs.forgetmenot.processors.composableAnnotation
 import com.tchibolabs.forgetmenot.processors.getAnnotation
 import com.tchibolabs.forgetmenot.processors.getConstructorArgs
+import com.tchibolabs.forgetmenot.processors.getCreatedAtMessage
 import com.tchibolabs.forgetmenot.processors.getFunctionParamSpecs
 import com.tchibolabs.forgetmenot.processors.getInjectorParameter
 import com.tchibolabs.forgetmenot.processors.getInvalidateRememberParams
@@ -37,7 +38,6 @@ import com.tchibolabs.forgetmenot.processors.rememberCoroutineScopeClassName
 import com.tchibolabs.forgetmenot.processors.rememberSaveableClassName
 import com.tchibolabs.forgetmenot.processors.saverClassName
 import com.tchibolabs.forgetmenot.processors.usesKoinInjection
-import java.time.LocalDateTime
 
 class RememberSaveableProcessor(
     private val codeGenerator: CodeGenerator,
@@ -98,8 +98,8 @@ class RememberSaveableProcessor(
 
             val saveableItem = saveableParameters.find { it.name == name }
             if (saveableItem != null) {
-                val type = param.type.toTypeName()
-                "$name = it[\"${saveableItem.key}\"] as $type"
+                val typeSimpleName = param.type.resolve().declaration.simpleName.asString()
+                "$name = it[\"${saveableItem.key}\"] as $typeSimpleName"
             } else {
                 "$name = $name"
             }
@@ -142,7 +142,7 @@ class RememberSaveableProcessor(
 
         FileSpec.builder(className.packageName, "RememberSaveable${className.simpleName}")
             .apply { imports.forEach { addImport(it.packageName, it.simpleName) } }
-            .addFileComment("This file was auto-generated on ${LocalDateTime.now()}. Do not modify.")
+            .addFileComment(getCreatedAtMessage())
             .addFunction(saverFunction)
             .addFunction(rememberSaveableFunction)
             .build()
