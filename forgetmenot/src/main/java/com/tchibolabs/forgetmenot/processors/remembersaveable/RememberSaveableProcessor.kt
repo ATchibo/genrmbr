@@ -95,11 +95,17 @@ class RememberSaveableProcessor(
 
         val restoreParams = classDeclaration.primaryConstructor?.parameters?.mapNotNull { param ->
             val name = param.name?.asString() ?: return@mapNotNull null
+            val ksType = param.type.resolve()
 
             val saveableItem = saveableParameters.find { it.name == name }
             if (saveableItem != null) {
-                val typeSimpleName = param.type.resolve().declaration.simpleName.asString()
-                "$name = it[\"${saveableItem.key}\"] as $typeSimpleName"
+                if (ksType.declaration.simpleName.asString() in listOf("List", "Iterable")) {
+                    val superType = ksType.arguments.first().type?.resolve()?.declaration?.qualifiedName?.asString()
+                    val castCloseString = if (ksType.isMarkedNullable) "?)?" else ")"
+                    "$name = (it[\"${saveableItem.key}\"] as ArrayList<*>$castCloseString.map { it as $superType }"
+                } else {
+                    "$name = it[\"${saveableItem.key}\"] as ${param.type.toTypeName()}"
+                }
             } else {
                 "$name = $name"
             }
