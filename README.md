@@ -2,7 +2,7 @@
   <img src="https://github.com/user-attachments/assets/ae0daaf5-e5ec-4337-820c-4a5fba486f61" height=256 width=256>
 </p>
 
-# forgetmenot: a Compose states boilerplate code generator
+# forgetmenot: a Compose states boilerplate code generator [![](https://jitpack.io/v/ATchibo/genrmbr.svg)](https://jitpack.io/#ATchibo/genrmbr)
 
 forgetmenot is a Kotlin library intended for generating remember and rememberSaveable composable functions. These functions are used for instantiating state classes of certain composable functions.
 
