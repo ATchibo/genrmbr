@@ -52,7 +52,6 @@ internal fun getFunctionParamSpecs(
     classDeclaration.primaryConstructor?.parameters?.mapNotNull { param ->
         val name = param.name?.asString() ?: return@mapNotNull null
         val type = param.type.toTypeName()
-        val typeSimpleName = param.type.resolve().declaration.simpleName.asString()
 
         val paramBuilder = ParameterSpec.builder(name, type)
 
@@ -76,7 +75,7 @@ internal fun getFunctionParamSpecs(
 
                 when {
                     hasInjectorFn -> {
-                        paramBuilder.defaultValue("$injectorFn<$typeSimpleName>($parametersString)")
+                        paramBuilder.defaultValue("$injectorFn<$type>($parametersString)")
                             .build()
                     }
 
