@@ -32,6 +32,9 @@ class RememberSaveableExampleState(
     private val duck: Duck,
     @DefaultInject
     private val duck1: Duck,
+    @Saveable("ducks")
+    @Value("listOf()")
+    initialDucks: List<Duck>,
 ) {
     @Saveable("index")
     var index by mutableIntStateOf(initialIndex)
@@ -41,6 +44,10 @@ class RememberSaveableExampleState(
         private set
 
     var myDuck by mutableStateOf(duck)
+        private set
+
+    @Saveable("ducks")
+    var ducks by mutableStateOf(initialDucks)
         private set
 }
 
